@@ -1,7 +1,7 @@
 const { WebSocketServer, WebSocket } = require("ws");
 const http = require("http");
 
-const PORT = process.env.WS_PORT || 3000;
+const PORT = process.env.PORT || process.env.WS_PORT || 3000;
 
 let currentState = null;
 const history = [];
