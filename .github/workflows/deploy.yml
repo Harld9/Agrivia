@@ -1,0 +1,55 @@
+name: CI/CD — Agrivia
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Build check (tous les PRs + push main) ─────────────────────────────────
+  ci:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: front/package-lock.json
+
+      - name: Install
+        run: cd front && npm ci
+
+      - name: Build
+        run: cd front && npm run build
+        env:
+          # Valeurs de CI (les vraies URLs sont configurées côté Render)
+          VITE_BACKEND_WS_URL: ${{ secrets.VITE_BACKEND_WS_URL }}
+          VITE_BACKEND_API_URL: ${{ secrets.VITE_BACKEND_API_URL }}
+
+  # ── Deploy (push sur main uniquement, après CI) ────────────────────────────
+  deploy:
+    name: Deploy → Render
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy backend
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_BACKEND }}"
+
+      - name: Deploy frontend
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_FRONTEND }}"
+
+      # Décommentez si vous déployez aussi les simulateurs sur Render
+      # - name: Deploy simulateurs
+      #   run: |
+      #     curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_MOSQUITTO }}"
+      #     curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_GATEWAY_1 }}"
+      #     curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_GATEWAY_2 }}"
+      #     curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_ESP32_1 }}"
+      #     curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_ESP32_2 }}"
+      #     curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_ESP32_3 }}"
+      #     curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_ESP32_4 }}"

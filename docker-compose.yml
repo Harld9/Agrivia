@@ -77,6 +77,58 @@ services:
       - agrivia_net
     restart: unless-stopped
 
+  # ── Serre 02 ──────────────────────────────────────────────────────────────
+
+  # Simulateur Gateway serre 02 — simule un 2ème Raspberry Pi
+  gateway_sim_2:
+    build: ./simulators/gateway
+    container_name: agrivia_gateway_2
+    environment:
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: "1883"
+      BACKEND_WS_URL: ws://backend:3000/ws
+      SERRE_ID: serre_02
+      RASPBERRY_ID: rpi_02
+      AUTH_TOKEN: RASPBERRY_SECRET_TOKEN
+    depends_on:
+      - mosquitto
+      - backend
+    networks:
+      - agrivia_net
+    restart: unless-stopped
+
+  # Simulateur ESP32 n°3 (serre 02)
+  esp32_sim_3:
+    build: ./simulators/esp32
+    container_name: agrivia_esp32_003
+    environment:
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: "1883"
+      SERRE_ID: serre_02
+      ESP_ID: esp32_003
+      SEND_INTERVAL: "10"
+    depends_on:
+      - mosquitto
+    networks:
+      - agrivia_net
+    restart: unless-stopped
+
+  # Simulateur ESP32 n°4 (serre 02)
+  esp32_sim_4:
+    build: ./simulators/esp32
+    container_name: agrivia_esp32_004
+    environment:
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: "1883"
+      SERRE_ID: serre_02
+      ESP_ID: esp32_004
+      SEND_INTERVAL: "10"
+    depends_on:
+      - mosquitto
+    networks:
+      - agrivia_net
+    restart: unless-stopped
+
   # Frontend React (servi par nginx)
   frontend:
     build: ./front

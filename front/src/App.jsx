@@ -1,261 +1,210 @@
 // src/App.jsx
 import { useState, useEffect, useRef } from 'react';
 import {
-    Thermometer,
-    Droplets,
-    Sprout,
-    Sun,
-    Fan,
-    Lightbulb,
-    Waves,
-    Brain,
-    Activity,
-    Wifi,
-    WifiOff
+    LayoutDashboard, SlidersHorizontal, TrendingUp, History,
+    User, Settings, Sprout, Sun, Moon, Calendar,
+    Thermometer, Droplets, Leaf, Zap,
+    Bot, Waves, Fan, Lightbulb, Plus, Minus, Monitor,
 } from 'lucide-react';
+import Switch from '@mui/material/Switch';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+
+const muiTheme = createTheme({
+    palette: {
+        primary: { main: '#4ade80', contrastText: '#000' },
+    },
+});
 import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer
+    AreaChart, Area, BarChart, Bar, LineChart, Line,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+    ResponsiveContainer,
 } from 'recharts';
 
-const BACKEND_WS_URL = import.meta.env.VITE_BACKEND_WS_URL || 'ws://localhost:3000';
+const BACKEND_WS_URL  = import.meta.env.VITE_BACKEND_WS_URL  || 'ws://localhost:3000';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3000';
 
 // ============================
-// HEADER COMPONENT
+// THEMES
 // ============================
-function Header({ isConnected, lastUpdate }) {
-    const formatTime = (timestamp) => {
-        if (!timestamp) return '--:--:--';
-        return new Date(timestamp).toLocaleTimeString('fr-FR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-    };
+const THEMES = {
+    dark: {
+        mainBg:      'bg-[#0f1117]',
+        sidebarBg:   'bg-[#1a1d27]',
+        cardBg:      'bg-[#1e2230]',
+        border:      'border-gray-700/50',
+        text:        'text-white',
+        textMuted:   'text-gray-400',
+        textLabel:   'text-gray-500',
+        accent:      'text-green-400',
+        accentHex:   '#4ade80',
+        navActive:   'text-green-400 bg-green-400/10 border-l-2 border-green-400',
+        navInactive: 'text-gray-400 hover:text-gray-200 hover:bg-white/5 border-l-2 border-transparent',
+        divider:     'border-gray-700/50',
+        toggleBg:    'bg-gray-700/60 hover:bg-gray-600/60',
+        chartGrid:   '#374151',
+        chartText:   '#9ca3af',
+        chartTrack:   '#374151',
+        tabActive:    'text-green-400 border-b-2 border-green-400',
+        tabInactive:  'text-gray-400 hover:text-gray-200 border-b-2 border-transparent',
+        summaryBg:    'bg-[#1e2230]',
+        tooltipBg:    '#1e2230',
+        tooltipBorder:'#374151',
+        btnMinus:     'bg-gray-700 hover:bg-gray-600 text-gray-200',
+        btnPlus:      'bg-green-500 hover:bg-green-400 text-white',
+        switchOff:    'bg-gray-600',
+        badge:        'bg-green-500/20 text-green-400',
+        badgeOff:     'bg-gray-700/60 text-gray-400',
+    },
+    light: {
+        mainBg:      'bg-slate-50',
+        sidebarBg:   'bg-white',
+        cardBg:      'bg-white',
+        border:      'border-gray-200',
+        text:        'text-gray-900',
+        textMuted:   'text-gray-500',
+        textLabel:   'text-gray-400',
+        accent:      'text-green-600',
+        accentHex:   '#16a34a',
+        navActive:   'text-green-600 bg-green-50 border-l-2 border-green-600',
+        navInactive: 'text-gray-500 hover:text-gray-800 hover:bg-gray-100 border-l-2 border-transparent',
+        divider:     'border-gray-200',
+        toggleBg:    'bg-gray-100 hover:bg-gray-200',
+        chartGrid:   '#e5e7eb',
+        chartText:   '#9ca3af',
+        chartTrack:   '#e5e7eb',
+        tabActive:    'text-green-600 border-b-2 border-green-600',
+        tabInactive:  'text-gray-400 hover:text-gray-600 border-b-2 border-transparent',
+        summaryBg:    'bg-white',
+        tooltipBg:    '#ffffff',
+        tooltipBorder:'#e5e7eb',
+        btnMinus:     'bg-gray-200 hover:bg-gray-300 text-gray-700',
+        btnPlus:      'bg-green-500 hover:bg-green-400 text-white',
+        switchOff:    'bg-gray-300',
+        badge:        'bg-green-100 text-green-700',
+        badgeOff:     'bg-gray-100 text-gray-500',
+    },
+};
 
+const NAV_MAIN = [
+    { id: 'dashboard',  label: 'Tableau de bord',      icon: LayoutDashboard },
+    { id: 'manual',     label: 'Pilotage manuel',       icon: SlidersHorizontal },
+    { id: 'analysis',   label: 'Analyse et prévisions', icon: TrendingUp },
+    { id: 'history',    label: 'Historique',            icon: History },
+    { id: 'monitoring', label: 'Monitoring',            icon: Monitor },
+];
+const NAV_SECONDARY = [
+    { id: 'profile',   label: 'Profil',     icon: User },
+    { id: 'settings',  label: 'Paramètres', icon: Settings },
+];
+
+// ============================
+// SIDEBAR
+// ============================
+function Sidebar({ theme, isDark, activePage, setActivePage, toggleTheme }) {
     return (
-        <header className="bg-gradient-to-r from-gray-800 via-gray-900 to-gray-800 shadow-lg border-b border-gray-700">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
-                            <Sprout className="w-8 h-8 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">
-                                AGRIVIA
-                            </h1>
-                            <p className="text-sm text-gray-400">Smart Greenhouse AI</p>
-                        </div>
-                    </div>
+        <aside className={`w-60 min-h-screen flex flex-col shrink-0 ${theme.sidebarBg} border-r ${theme.divider}`}>
+            <div className="px-6 pt-8 pb-6">
+                <div className="flex items-center gap-2 mb-5">
+                    <Sprout className={`w-7 h-7 ${theme.accent}`} />
+                    <span className={`text-xl font-bold ${theme.accent}`}>Agrivía</span>
+                </div>
+                <div className={`text-sm font-medium ${theme.text}`}>John Doe</div>
+                <div className={`text-xs ${theme.textMuted} mt-0.5`}>Responsable serre</div>
+            </div>
 
-                    <div className="flex flex-col sm:items-end gap-2">
-                        <div className="flex items-center gap-2">
-                            {isConnected ? (
-                                <>
-                                    <Wifi className="w-4 h-4 text-green-500" />
-                                    <span className="text-sm text-green-400 font-medium">Temps réel</span>
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                </>
-                            ) : (
-                                <>
-                                    <WifiOff className="w-4 h-4 text-red-500" />
-                                    <span className="text-sm text-red-400 font-medium">Déconnecté</span>
-                                </>
-                            )}
-                        </div>
-                        <div className="text-sm text-gray-400">
-                            Dernière mise à jour: <span className="text-gray-300 font-mono">{formatTime(lastUpdate)}</span>
-                        </div>
-                    </div>
+            <div className={`mx-4 border-t ${theme.divider}`} />
+
+            <nav className="flex-1 px-3 py-4 space-y-1">
+                {NAV_MAIN.map(({ id, label, icon: Icon }) => (
+                    <button key={id} onClick={() => setActivePage(id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm font-medium transition-all duration-150 text-left
+                            ${activePage === id ? theme.navActive : theme.navInactive}`}>
+                        <Icon className="w-4 h-4 shrink-0" />
+                        {label}
+                    </button>
+                ))}
+                <div className={`my-3 border-t ${theme.divider}`} />
+                {NAV_SECONDARY.map(({ id, label, icon: Icon }) => (
+                    <button key={id} onClick={() => setActivePage(id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm font-medium transition-all duration-150 text-left
+                            ${activePage === id ? theme.navActive : theme.navInactive}`}>
+                        <Icon className="w-4 h-4 shrink-0" />
+                        {label}
+                    </button>
+                ))}
+            </nav>
+
+            <div className="px-4 pb-6 space-y-4">
+                <div className={`border-t ${theme.divider} mb-4`} />
+                <button onClick={toggleTheme}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${theme.toggleBg} ${theme.textMuted}`}>
+                    {isDark ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
+                    {isDark ? 'Thème clair' : 'Thème sombre'}
+                </button>
+                <div className="flex items-center gap-2 px-3 pt-2">
+                    <Sprout className={`w-5 h-5 ${theme.accent} opacity-40`} />
+                    <span className={`text-sm font-semibold ${theme.accent} opacity-40`}>Agrivía</span>
                 </div>
             </div>
-        </header>
+        </aside>
     );
 }
 
 // ============================
-// AI BRAIN COMPONENT
+// DONUT GAUGE (SVG)
 // ============================
-function AIBrain({ aiContext }) {
-    if (!aiContext) {
-        return (
-            <div className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
-                <div className="flex items-center gap-3 mb-3">
-                    <Brain className="w-6 h-6 text-gray-500" />
-                    <h2 className="text-xl font-bold text-gray-500">Cerveau IA</h2>
-                </div>
-                <p className="text-gray-500">En attente de données...</p>
-            </div>
-        );
-    }
-
-    const { mode, last_action, reason, confidence } = aiContext;
-    const isActive = mode === 'auto';
+function DonutGauge({ value, max = 100, theme }) {
+    const r   = 56;
+    const cx  = 80;
+    const cy  = 80;
+    const circ = 2 * Math.PI * r;
+    const fill = Math.min(value / max, 1) * circ;
 
     return (
-        <div
-            className={`bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 shadow-xl border-2 ${isActive ? 'border-green-500 animate-glow-pulse' : 'border-gray-700'
-                }`}
-        >
-            <div className="flex items-center gap-3 mb-4">
-                <div className={`p-3 rounded-lg ${isActive ? 'bg-green-500/20 animate-ai-pulse' : 'bg-gray-700'}`}>
-                    <Brain className={`w-8 h-8 ${isActive ? 'text-green-400' : 'text-gray-400'}`} />
-                </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">
-                        Cerveau IA
-                    </h2>
-                    <p className="text-sm text-gray-400">
-                        Mode: <span className={`font-semibold ${isActive ? 'text-green-400' : 'text-gray-300'}`}>
-                            {mode.toUpperCase()}
-                        </span>
-                    </p>
-                </div>
-            </div>
-
-            <div className="space-y-3">
-                <div className="flex items-start gap-3 p-3 bg-gray-800/50 rounded-lg">
-                    <Activity className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                        <p className="text-xs text-gray-400 uppercase font-semibold mb-1">Dernière action</p>
-                        <p className="text-white font-medium">{last_action || 'Aucune action'}</p>
-                    </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-gray-800/50 rounded-lg">
-                    <Sprout className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                        <p className="text-xs text-gray-400 uppercase font-semibold mb-1">Raison</p>
-                        <p className="text-gray-200">{reason || 'N/A'}</p>
-                    </div>
-                </div>
-
-                <div className="mt-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-gray-400 uppercase font-semibold">Confiance</span>
-                        <span className="text-lg font-bold text-green-400">{Math.round((confidence || 0) * 100)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-500 rounded-full"
-                            style={{ width: `${(confidence || 0) * 100}%` }}
-                        ></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <svg width="160" height="160" viewBox="0 0 160 160">
+            {/* Track */}
+            <circle cx={cx} cy={cy} r={r} fill="none"
+                stroke={theme.chartTrack} strokeWidth="14" />
+            {/* Value arc */}
+            <circle cx={cx} cy={cy} r={r} fill="none"
+                stroke={theme.accentHex} strokeWidth="14"
+                strokeLinecap="round"
+                strokeDasharray={`${fill} ${circ}`}
+                transform={`rotate(-90 ${cx} ${cy})`} />
+            {/* Center value */}
+            <text x={cx} y={cy - 6} textAnchor="middle"
+                fill={theme.accentHex} fontSize="20" fontWeight="700">
+                {value.toFixed(1)}%
+            </text>
+            <text x={cx} y={cy + 16} textAnchor="middle"
+                fill={theme.chartText} fontSize="11">
+                humidité
+            </text>
+        </svg>
     );
 }
 
 // ============================
-// SENSOR CARD COMPONENT
+// DASHBOARD HEADER (tabs + logo)
 // ============================
-function SensorCard({ icon: Icon, label, value, unit, isCritical }) {
+const TIME_TABS = ['Jour', 'Semaine', 'Mois', 'Année'];
+
+function DashboardHeader({ theme, activeTab, setActiveTab }) {
     return (
-        <div
-            className={`rounded-xl p-6 shadow-lg border-2 transition-all duration-300 ${isCritical
-                    ? 'bg-gradient-to-br from-red-900/40 to-orange-900/40 border-red-500 animate-alert-pulse'
-                    : 'bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700 hover:border-gray-600'
-                }`}
-        >
-            <div className="flex items-start justify-between mb-3">
-                <div className={`p-3 rounded-lg ${isCritical ? 'bg-red-500/20' : 'bg-gray-700'}`}>
-                    <Icon className={`w-6 h-6 ${isCritical ? 'text-red-400' : 'text-emerald-400'}`} />
-                </div>
-                {isCritical && (
-                    <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-bold rounded uppercase">
-                        Alerte
-                    </span>
-                )}
+        <div className={`flex items-center justify-between px-8 pt-6 pb-0 border-b ${theme.divider}`}>
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+                <Sprout className={`w-6 h-6 ${theme.accent}`} />
+                <span className={`text-lg font-bold ${theme.accent}`}>Agrivía</span>
             </div>
-
-            <div className="space-y-1">
-                <p className="text-sm text-gray-400 font-medium">{label}</p>
-                <div className="flex items-baseline gap-1">
-                    <p className={`text-3xl font-bold ${isCritical ? 'text-red-300' : 'text-white'}`}>
-                        {value !== null && value !== undefined ? value.toFixed(1) : '--'}
-                    </p>
-                    <span className="text-lg text-gray-400">{unit}</span>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ============================
-// ACTUATOR STATUS COMPONENT
-// ============================
-function ActuatorStatus({ actuators }) {
-    if (!actuators) {
-        return (
-            <div className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
-                <h3 className="text-lg font-bold text-gray-400 mb-4">État des Actionneurs</h3>
-                <p className="text-gray-500">Aucune donnée disponible</p>
-            </div>
-        );
-    }
-
-    const { pump, fan, grow_light } = actuators;
-
-    const actuatorItems = [
-        {
-            icon: Waves,
-            label: 'Pompe',
-            state: pump?.state || false,
-            detail: null
-        },
-        {
-            icon: Fan,
-            label: 'Ventilateur',
-            state: fan?.state || false,
-            detail: fan?.state ? `${fan.speed || 0}%` : null
-        },
-        {
-            icon: Lightbulb,
-            label: 'Lumière',
-            state: grow_light?.state || false,
-            detail: grow_light?.state ? `${grow_light.intensity || 0}%` : null
-        }
-    ];
-
-    return (
-        <div className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-emerald-400" />
-                État des Actionneurs
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {actuatorItems.map(({ icon: Icon, label, state, detail }) => (
-                    <div
-                        key={label}
-                        className={`p-4 rounded-lg border-2 transition-all ${state
-                                ? 'bg-green-500/10 border-green-500/50'
-                                : 'bg-gray-700/30 border-gray-600'
-                            }`}
-                    >
-                        <div className="flex items-center gap-3 mb-2">
-                            <Icon className={`w-5 h-5 ${state ? 'text-green-400' : 'text-gray-500'}`} />
-                            <span className="text-sm font-medium text-gray-300">{label}</span>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                            <span className={`text-xs font-bold uppercase ${state ? 'text-green-400' : 'text-gray-500'}`}>
-                                {state ? 'ON' : 'OFF'}
-                            </span>
-                            {detail && (
-                                <span className="text-xs text-gray-400 font-mono">{detail}</span>
-                            )}
-                        </div>
-                    </div>
+            {/* Tabs */}
+            <div className="flex gap-6">
+                {TIME_TABS.map(tab => (
+                    <button key={tab} onClick={() => setActiveTab(tab)}
+                        className={`pb-4 text-sm font-medium transition-all duration-150
+                            ${activeTab === tab ? theme.tabActive : theme.tabInactive}`}>
+                        {tab}
+                    </button>
                 ))}
             </div>
         </div>
@@ -263,238 +212,1264 @@ function ActuatorStatus({ actuators }) {
 }
 
 // ============================
-// HISTORY CHART COMPONENT
+// SUMMARY CARD
 // ============================
-function HistoryChart({ data }) {
-    if (!data || data.length === 0) {
-        return (
-            <div className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
-                <h3 className="text-lg font-bold text-white mb-4">Historique</h3>
-                <div className="h-64 flex items-center justify-center">
-                    <p className="text-gray-500">Aucune donnée historique disponible</p>
-                </div>
-            </div>
-        );
-    }
+function SummaryCard({ theme, currentData }) {
+    const sensors = currentData?.sensors || {};
+    const date = currentData?.timestamp
+        ? new Date(currentData.timestamp).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+        : new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    const chartData = data.map(item => ({
-        time: item.timestamp
-            ? new Date(item.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-            : '--:--',
-        temperature: item.sensors?.temperature || 0,
-        soilHumidity: item.sensors?.soil_humidity || 0,
-    })).reverse();
+    const items = [
+        { label: 'Température',      value: sensors.temperature   != null ? sensors.temperature.toFixed(1)   : '--', unit: '°C'  },
+        { label: "Humidité de l'air", value: sensors.air_humidity  != null ? sensors.air_humidity.toFixed(1)  : '--', unit: '%'   },
+        { label: 'Humidité du sol',  value: sensors.soil_humidity != null ? sensors.soil_humidity.toFixed(1) : '--', unit: '%'   },
+        { label: 'Luminosité',       value: sensors.light_level   != null ? sensors.light_level.toFixed(1)   : '--', unit: ' lux' },
+    ];
 
     return (
-        <div className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-emerald-400" />
-                Historique (20 dernières mesures)
-            </h3>
+        <div className={`mx-8 mt-6 rounded-2xl border ${theme.border} ${theme.summaryBg} px-6 py-4 flex flex-wrap items-center gap-6`}>
+            {/* Date */}
+            <div className={`flex items-center gap-2 ${theme.textMuted} shrink-0`}>
+                <Calendar className="w-4 h-4" />
+                <span className="text-sm font-medium">{date}</span>
+            </div>
 
-            <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={chartData}>
-                    <defs>
-                        <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="colorSoil" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                        </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="time" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                    <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                    <Tooltip
-                        contentStyle={{
-                            backgroundColor: '#1f2937',
-                            border: '1px solid #374151',
-                            borderRadius: '8px',
-                            color: '#fff'
-                        }}
-                    />
-                    <Legend wrapperStyle={{ color: '#9ca3af' }} />
-                    <Area
-                        type="monotone"
-                        dataKey="temperature"
-                        stroke="#f97316"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#colorTemp)"
-                        name="Température (°C)"
-                    />
-                    <Area
-                        type="monotone"
-                        dataKey="soilHumidity"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#colorSoil)"
-                        name="Humidité Sol (%)"
-                    />
-                </AreaChart>
-            </ResponsiveContainer>
+            <div className={`hidden sm:block w-px h-8 ${theme.divider} border-l`} />
+
+            {/* Sensor values */}
+            {items.map(({ label, value, unit }) => (
+                <div key={label} className="flex flex-col gap-0.5">
+                    <span className={`text-xs font-medium ${theme.textLabel} uppercase tracking-wide`}>{label}</span>
+                    <span className={`text-xl font-bold ${theme.accent}`}>
+                        {value}<span className={`text-sm font-normal ${theme.textMuted}`}>{unit}</span>
+                    </span>
+                </div>
+            ))}
         </div>
     );
 }
 
 // ============================
-// MAIN APP COMPONENT
+// CARD WRAPPER
 // ============================
-function App() {
+function DataCard({ theme, title, icon: Icon, children }) {
+    return (
+        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-5 flex flex-col gap-4`}>
+            <div className="flex items-center gap-2">
+                <Icon className={`w-4 h-4 ${theme.accent}`} />
+                <h3 className={`text-sm font-semibold ${theme.accent}`}>{title}</h3>
+            </div>
+            {children}
+        </div>
+    );
+}
+
+// ============================
+// TEMPERATURE CARD
+// ============================
+function TemperatureCard({ theme, historyData }) {
+    const data = [...historyData].reverse().map(item => ({
+        time: item.timestamp
+            ? new Date(item.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            : '',
+        value: item.sensors?.temperature ?? null,
+    }));
+
+    const tooltipStyle = {
+        backgroundColor: theme.tooltipBg,
+        border: `1px solid ${theme.tooltipBorder}`,
+        borderRadius: '8px',
+        color: theme.text === 'text-white' ? '#fff' : '#111',
+        fontSize: '12px',
+    };
+
+    return (
+        <DataCard theme={theme} title="Température" icon={Thermometer}>
+            <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <defs>
+                        <linearGradient id="gradTemp" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor={theme.accentHex} stopOpacity={0.25} />
+                            <stop offset="95%" stopColor={theme.accentHex} stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.chartGrid} vertical={false} />
+                    <XAxis dataKey="time" tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} unit="°" />
+                    <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v}°C`, 'Température']} />
+                    <Area type="monotone" dataKey="value" stroke={theme.accentHex} strokeWidth={2}
+                        fill="url(#gradTemp)" dot={false} activeDot={{ r: 4, fill: theme.accentHex }} />
+                </AreaChart>
+            </ResponsiveContainer>
+        </DataCard>
+    );
+}
+
+// ============================
+// AIR HUMIDITY CARD
+// ============================
+function AirHumidityCard({ theme, currentData }) {
+    const value = currentData?.sensors?.air_humidity ?? 0;
+    return (
+        <DataCard theme={theme} title="Humidité de l'air" icon={Droplets}>
+            <div className="flex items-center justify-center flex-1 py-2">
+                <DonutGauge value={value} max={100} theme={theme} />
+            </div>
+        </DataCard>
+    );
+}
+
+// ============================
+// SOIL HUMIDITY CARD
+// ============================
+function SoilHumidityCard({ theme, historyData }) {
+    const data = [...historyData].reverse().map(item => ({
+        time: item.timestamp
+            ? new Date(item.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            : '',
+        value: item.sensors?.soil_humidity ?? null,
+    }));
+
+    const tooltipStyle = {
+        backgroundColor: theme.tooltipBg,
+        border: `1px solid ${theme.tooltipBorder}`,
+        borderRadius: '8px',
+        color: theme.text === 'text-white' ? '#fff' : '#111',
+        fontSize: '12px',
+    };
+
+    return (
+        <DataCard theme={theme} title="Humidité du sol" icon={Leaf}>
+            <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.chartGrid} vertical={false} />
+                    <XAxis dataKey="time" tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} unit="%" domain={[0, 100]} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v}%`, 'Humidité sol']} />
+                    <Bar dataKey="value" fill={theme.accentHex} radius={[3, 3, 0, 0]} opacity={0.85} />
+                </BarChart>
+            </ResponsiveContainer>
+        </DataCard>
+    );
+}
+
+// ============================
+// LUMINOSITY CARD
+// ============================
+function LuminosityCard({ theme, historyData }) {
+    const data = [...historyData].reverse().map(item => ({
+        time: item.timestamp
+            ? new Date(item.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            : '',
+        value: item.sensors?.light_level ?? null,
+    }));
+
+    const tooltipStyle = {
+        backgroundColor: theme.tooltipBg,
+        border: `1px solid ${theme.tooltipBorder}`,
+        borderRadius: '8px',
+        color: theme.text === 'text-white' ? '#fff' : '#111',
+        fontSize: '12px',
+    };
+
+    return (
+        <DataCard theme={theme} title="Luminosité" icon={Zap}>
+            <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <defs>
+                        <linearGradient id="gradLux" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor={theme.accentHex} stopOpacity={0.25} />
+                            <stop offset="95%" stopColor={theme.accentHex} stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.chartGrid} vertical={false} />
+                    <XAxis dataKey="time" tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} unit=" lx" />
+                    <Tooltip contentStyle={tooltipStyle} formatter={v => [`${v} lux`, 'Luminosité']} />
+                    <Area type="monotone" dataKey="value" stroke={theme.accentHex} strokeWidth={2}
+                        fill="url(#gradLux)" dot={false} activeDot={{ r: 4, fill: theme.accentHex }} />
+                </AreaChart>
+            </ResponsiveContainer>
+        </DataCard>
+    );
+}
+
+// ============================
+// DASHBOARD PAGE
+// ============================
+function DashboardPage({ theme, historyData, devices }) {
+    const [activeTab, setActiveTab] = useState('Jour');
+
+    // Collecter tous les serre_id connus (devices + history)
+    const allSerreIds = [...new Set([
+        ...devices.map(d => d.serre_id).filter(Boolean),
+        ...historyData.map(h => h.serre_id).filter(Boolean),
+    ])].sort();
+
+    // Grouper l'historique par serre
+    const historyBySerre = historyData.reduce((acc, entry) => {
+        const s = entry.serre_id || 'Inconnue';
+        (acc[s] = acc[s] || []).push(entry);
+        return acc;
+    }, {});
+
+    // Dernière mesure par serre (l'historique est trié newest-first)
+    const currentBySerre = Object.fromEntries(
+        Object.entries(historyBySerre).map(([s, entries]) => [s, entries[0]])
+    );
+
+    return (
+        <div className="flex flex-col min-h-screen">
+            <DashboardHeader theme={theme} activeTab={activeTab} setActiveTab={setActiveTab} />
+
+            <div className="px-8 pt-6 pb-2">
+                <h1 className={`text-2xl font-bold ${theme.text}`}>Tableau de bord</h1>
+                <p className={`text-sm mt-1 ${theme.textMuted}`}>
+                    {allSerreIds.length > 0
+                        ? `${allSerreIds.length} serre${allSerreIds.length !== 1 ? 's' : ''} surveillée${allSerreIds.length !== 1 ? 's' : ''}`
+                        : 'En attente de données…'}
+                </p>
+            </div>
+
+            {allSerreIds.length === 0 ? (
+                <div className="px-8 py-16 text-center">
+                    <Sprout className={`w-12 h-12 mx-auto mb-3 ${theme.textMuted} opacity-30`} />
+                    <p className={`${theme.textMuted} text-sm`}>Aucune donnée reçue — démarrez les simulateurs</p>
+                </div>
+            ) : (
+                allSerreIds.map((serreId, idx) => {
+                    const serreHistory     = historyBySerre[serreId] || [];
+                    const serreCurrentData = currentBySerre[serreId] || null;
+                    const serreDevices     = devices.filter(d => d.serre_id === serreId);
+                    const onlineCount      = serreDevices.filter(d => d.status === 'online').length;
+
+                    return (
+                        <div key={serreId}>
+                            {/* Séparateur entre serres */}
+                            {idx > 0 && <div className={`mx-8 mt-4 border-t ${theme.divider}`} />}
+
+                            {/* En-tête serre */}
+                            <div className="px-8 pt-6 flex items-center gap-3">
+                                <Sprout className={`w-5 h-5 ${theme.accent}`} />
+                                <h2 className={`text-lg font-bold ${theme.text}`}>{serreId}</h2>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                                    ${onlineCount > 0 ? theme.badge : theme.badgeOff}`}>
+                                    {onlineCount}/{serreDevices.length || '?'} module{serreDevices.length !== 1 ? 's' : ''} en ligne
+                                </span>
+                            </div>
+
+                            <SummaryCard theme={theme} currentData={serreCurrentData} />
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 px-8 py-6">
+                                <TemperatureCard  theme={theme} historyData={serreHistory} />
+                                <AirHumidityCard  theme={theme} currentData={serreCurrentData} />
+                                <SoilHumidityCard theme={theme} historyData={serreHistory} />
+                                <LuminosityCard   theme={theme} historyData={serreHistory} />
+                            </div>
+                        </div>
+                    );
+                })
+            )}
+        </div>
+    );
+}
+
+// ============================
+// ANALYSIS HELPERS
+// ============================
+function computeStats(values) {
+    const v = values.filter(x => x != null && !isNaN(x));
+    if (v.length === 0) return { min: null, max: null, avg: null, slope: 0, next: null };
+    const min = Math.min(...v);
+    const max = Math.max(...v);
+    const avg = v.reduce((a, b) => a + b, 0) / v.length;
+    // Régression linéaire sur les 6 derniers points
+    const r = v.slice(-6);
+    const n = r.length;
+    let slope = 0;
+    if (n >= 2) {
+        const mx = (n - 1) / 2;
+        const my = r.reduce((a, b) => a + b, 0) / n;
+        const num = r.reduce((acc, y, x) => acc + (x - mx) * (y - my), 0);
+        const den = r.reduce((acc, _, x) => acc + (x - mx) ** 2, 0);
+        slope = den !== 0 ? num / den : 0;
+    }
+    return { min, max, avg, slope, next: v[v.length - 1] + slope };
+}
+
+function TrendArrow({ slope, unit, decimals = 1 }) {
+    const abs = Math.abs(slope);
+    if (abs < 0.05) return <span className="text-gray-400 font-medium">→ stable</span>;
+    const up = slope > 0;
+    return (
+        <span className={`font-medium ${up ? 'text-orange-400' : 'text-blue-400'}`}>
+            {up ? '↑' : '↓'} {abs.toFixed(decimals)}{unit} / mesure
+        </span>
+    );
+}
+
+// ============================
+// ANALYSIS STAT CARD
+// ============================
+function AnalysisStatCard({ theme, title, icon: Icon, stats, unit, decimals = 1, color }) {
+    const tooltipStyle = {
+        backgroundColor: theme.tooltipBg,
+        border: `1px solid ${theme.tooltipBorder}`,
+        borderRadius: '8px',
+        color: theme.text === 'text-white' ? '#fff' : '#111',
+        fontSize: '12px',
+    };
+
+    return (
+        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-5 flex flex-col gap-4`}>
+            {/* Title */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Icon className="w-4 h-4" style={{ color }} />
+                    <h3 className="text-sm font-semibold" style={{ color }}>{title}</h3>
+                </div>
+                <TrendArrow slope={stats.slope} unit={unit} decimals={decimals} />
+            </div>
+
+            {/* Min / Moy / Max */}
+            <div className={`grid grid-cols-3 gap-2 py-3 border-y ${theme.divider}`}>
+                {[['Min', stats.min], ['Moy', stats.avg], ['Max', stats.max]].map(([label, val]) => (
+                    <div key={label} className="text-center">
+                        <p className={`text-xs ${theme.textLabel} mb-1`}>{label}</p>
+                        <p className={`text-base font-bold ${theme.text}`}>
+                            {val != null ? val.toFixed(decimals) : '--'}
+                            <span className={`text-xs font-normal ${theme.textMuted} ml-0.5`}>{unit}</span>
+                        </p>
+                    </div>
+                ))}
+            </div>
+
+            {/* Prévision */}
+            <div className="flex items-center justify-between">
+                <span className={`text-xs ${theme.textMuted}`}>Prochaine mesure estimée</span>
+                <span className="text-sm font-bold" style={{ color }}>
+                    {stats.next != null ? stats.next.toFixed(decimals) : '--'}{unit}
+                </span>
+            </div>
+        </div>
+    );
+}
+
+// ============================
+// OVERVIEW MULTI-LINE CHART
+// ============================
+const SENSOR_LINES = [
+    { key: 'temperature',   label: 'Température (°C)',  color: '#f97316' },
+    { key: 'air_humidity',  label: "Humidité air (%)",  color: '#60a5fa' },
+    { key: 'soil_humidity', label: 'Humidité sol (%)',  color: '#4ade80' },
+    { key: 'light_level',   label: 'Luminosité (÷10)', color: '#facc15' },
+];
+
+function OverviewChart({ theme, historyData }) {
+    const data = [...historyData].reverse().map(item => ({
+        time: item.timestamp
+            ? new Date(item.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            : '',
+        temperature:   item.sensors?.temperature   ?? null,
+        air_humidity:  item.sensors?.air_humidity  ?? null,
+        soil_humidity: item.sensors?.soil_humidity ?? null,
+        light_level:   item.sensors?.light_level != null ? item.sensors.light_level / 10 : null,
+    }));
+
+    const tooltipStyle = {
+        backgroundColor: theme.tooltipBg,
+        border: `1px solid ${theme.tooltipBorder}`,
+        borderRadius: '8px',
+        color: theme.text === 'text-white' ? '#fff' : '#111',
+        fontSize: '12px',
+    };
+
+    return (
+        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-5`}>
+            <h3 className={`text-sm font-semibold ${theme.text} mb-4`}>Vue d'ensemble — toutes les mesures</h3>
+            <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.chartGrid} vertical={false} />
+                    <XAxis dataKey="time" tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '12px', color: theme.chartText }} />
+                    {SENSOR_LINES.map(({ key, label, color }) => (
+                        <Line key={key} type="monotone" dataKey={key} name={label}
+                            stroke={color} strokeWidth={2} dot={false}
+                            activeDot={{ r: 4, fill: color }} connectNulls />
+                    ))}
+                </LineChart>
+            </ResponsiveContainer>
+            <p className={`text-xs ${theme.textMuted} mt-2`}>
+                * Luminosité divisée par 10 pour l'affichage comparatif
+            </p>
+        </div>
+    );
+}
+
+// ============================
+// ANALYSIS PAGE
+// ============================
+function AnalysisPage({ theme, currentData, historyData }) {
+    const sensors = [
+        {
+            key: 'temperature',   title: 'Température',      icon: Thermometer,
+            unit: '°C',  decimals: 1, color: '#f97316',
+        },
+        {
+            key: 'air_humidity',  title: "Humidité de l'air", icon: Droplets,
+            unit: '%',   decimals: 1, color: '#60a5fa',
+        },
+        {
+            key: 'soil_humidity', title: 'Humidité du sol',  icon: Leaf,
+            unit: '%',   decimals: 1, color: '#4ade80',
+        },
+        {
+            key: 'light_level',   title: 'Luminosité',       icon: Zap,
+            unit: ' lux', decimals: 0, color: '#facc15',
+        },
+    ];
+
+    // Calculer les stats pour chaque capteur à partir de l'historique
+    const statsMap = Object.fromEntries(
+        sensors.map(({ key }) => [
+            key,
+            computeStats(historyData.map(item => item.sensors?.[key] ?? null)),
+        ])
+    );
+
+    return (
+        <div className="flex flex-col min-h-screen">
+            {/* Header */}
+            <div className={`px-8 pt-8 pb-6 border-b ${theme.divider}`}>
+                <h1 className={`text-2xl font-bold ${theme.text}`}>Analyse et prévisions</h1>
+                <p className={`text-sm mt-1 ${theme.textMuted}`}>
+                    Basé sur les {historyData.length} dernières mesures
+                </p>
+            </div>
+
+            <div className="px-8 py-6 flex flex-col gap-6">
+                {/* Overview chart */}
+                <OverviewChart theme={theme} historyData={historyData} />
+
+                {/* Stat cards 2×2 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {sensors.map(({ key, title, icon, unit, decimals, color }) => (
+                        <AnalysisStatCard
+                            key={key}
+                            theme={theme}
+                            title={title}
+                            icon={icon}
+                            stats={statsMap[key]}
+                            unit={unit}
+                            decimals={decimals}
+                            color={color}
+                        />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ============================
+// HISTORY PAGE
+// ============================
+function ActuatorDot({ active, label }) {
+    return (
+        <span className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full
+            ${active ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-500'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-400' : 'bg-gray-500'}`} />
+            {label}
+        </span>
+    );
+}
+
+function HistoryPage({ theme, historyData, thresholds }) {
+    const [sortAsc, setSortAsc] = useState(false);
+
+    const rows = sortAsc ? [...historyData].reverse() : historyData;
+
+    const tempLimit = thresholds?.temp_high ?? 28;
+    const soilLimit = thresholds?.soil_low  ?? 30;
+
+    const isTempCritical = v => v != null && v > tempLimit;
+    const isSoilCritical = v => v != null && v < soilLimit;
+
+    const fmt = (v, d = 1) => v != null ? v.toFixed(d) : '—';
+
+    const fmtDate = ts => {
+        if (!ts) return '—';
+        const d = new Date(ts);
+        return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+            + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    };
+
+    return (
+        <div className="flex flex-col min-h-screen">
+            {/* Header */}
+            <div className={`px-8 pt-8 pb-6 border-b ${theme.divider}`}>
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                        <h1 className={`text-2xl font-bold ${theme.text}`}>Historique</h1>
+                        <p className={`text-sm mt-1 ${theme.textMuted}`}>
+                            {historyData.length} mesure{historyData.length > 1 ? 's' : ''} enregistrée{historyData.length > 1 ? 's' : ''}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setSortAsc(s => !s)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border ${theme.border} ${theme.cardBg} ${theme.textMuted} hover:${theme.text} transition-colors`}>
+                        {sortAsc ? '↑ Plus ancien d\'abord' : '↓ Plus récent d\'abord'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Table */}
+            <div className="px-8 py-6">
+                {historyData.length === 0 ? (
+                    <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-12 text-center`}>
+                        <History className={`w-12 h-12 mx-auto mb-3 ${theme.textMuted} opacity-40`} />
+                        <p className={theme.textMuted}>Aucune donnée disponible — en attente du simulateur</p>
+                    </div>
+                ) : (
+                    <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} overflow-hidden`}>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                {/* Head */}
+                                <thead>
+                                    <tr className={`border-b ${theme.divider}`}>
+                                        {['Horodatage', 'Temp.', 'Hum. air', 'Hum. sol', 'Luminosité', 'Actionneurs', 'Action IA'].map(h => (
+                                            <th key={h} className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide ${theme.textLabel}`}>
+                                                {h}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+
+                                {/* Body */}
+                                <tbody>
+                                    {rows.map((row, i) => {
+                                        const s  = row.sensors   || {};
+                                        const a  = row.actuators || {};
+                                        const ai = row.ai_context;
+                                        const isEven = i % 2 === 0;
+
+                                        return (
+                                            <tr key={i}
+                                                className={`border-b ${theme.divider} last:border-0 transition-colors
+                                                    ${isEven ? '' : (theme.mainBg === 'bg-[#0f1117]' ? 'bg-white/[0.02]' : 'bg-black/[0.02]')}`}>
+
+                                                {/* Horodatage */}
+                                                <td className={`px-4 py-3 font-mono text-xs ${theme.textMuted} whitespace-nowrap`}>
+                                                    {fmtDate(row.timestamp)}
+                                                </td>
+
+                                                {/* Température */}
+                                                <td className={`px-4 py-3 font-semibold whitespace-nowrap
+                                                    ${isTempCritical(s.temperature) ? 'text-orange-400' : theme.text}`}>
+                                                    {fmt(s.temperature)}°C
+                                                </td>
+
+                                                {/* Humidité air */}
+                                                <td className={`px-4 py-3 whitespace-nowrap ${theme.text}`}>
+                                                    {fmt(s.air_humidity)}%
+                                                </td>
+
+                                                {/* Humidité sol */}
+                                                <td className={`px-4 py-3 font-semibold whitespace-nowrap
+                                                    ${isSoilCritical(s.soil_humidity) ? 'text-blue-400' : theme.text}`}>
+                                                    {fmt(s.soil_humidity)}%
+                                                </td>
+
+                                                {/* Luminosité */}
+                                                <td className={`px-4 py-3 whitespace-nowrap ${theme.text}`}>
+                                                    {s.light_level != null ? s.light_level : '—'} lux
+                                                </td>
+
+                                                {/* Actionneurs */}
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-wrap gap-1">
+                                                        <ActuatorDot active={a.pump?.state}       label="Pompe" />
+                                                        <ActuatorDot active={a.fan?.state}        label="Fan" />
+                                                        <ActuatorDot active={a.grow_light?.state} label="LED" />
+                                                    </div>
+                                                </td>
+
+                                                {/* Action IA */}
+                                                <td className={`px-4 py-3 text-xs max-w-xs ${theme.textMuted}`}>
+                                                    {ai?.last_action || '—'}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Footer */}
+                        <div className={`px-4 py-3 border-t ${theme.divider} flex items-center justify-between`}>
+                            <span className={`text-xs ${theme.textMuted}`}>
+                                {historyData.length} / 20 entrées max (mémoire backend)
+                            </span>
+                            <div className="flex gap-3 text-xs">
+                                <span className="flex items-center gap-1 text-orange-400">
+                                    <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
+                                    Température &gt; {tempLimit}°C
+                                </span>
+                                <span className="flex items-center gap-1 text-blue-400">
+                                    <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                                    Sol &lt; {soilLimit}%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ============================
+// MONITORING PAGE
+// ============================
+function SignalBars({ rssi }) {
+    const level = rssi == null ? 0 : rssi > -60 ? 4 : rssi > -70 ? 3 : rssi > -80 ? 2 : 1;
+    return (
+        <div className="flex items-end gap-0.5 h-4">
+            {[1, 2, 3, 4].map(i => (
+                <div key={i}
+                    style={{ height: `${i * 4}px` }}
+                    className={`w-1.5 rounded-sm ${i <= level ? 'bg-green-400' : 'bg-gray-600'}`}
+                />
+            ))}
+        </div>
+    );
+}
+
+function uptimeStr(s) {
+    if (!s) return '—';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+
+function DeviceCard({ theme, device }) {
+    const isOnline = device.status === 'online';
+    const isDarkMode = theme.mainBg === 'bg-[#0f1117]';
+
+    const lastSeen = device.last_seen
+        ? new Date(device.last_seen).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : '—';
+
+    const sensors   = device.sensors   || {};
+    const actuators = device.actuators || {};
+
+    const sensorRows = [
+        { label: 'Température', value: sensors.temperature  != null ? sensors.temperature.toFixed(1)  : null, unit: '°C',   icon: Thermometer },
+        { label: 'Hum. air',    value: sensors.air_humidity != null ? sensors.air_humidity.toFixed(1)  : null, unit: '%',    icon: Droplets },
+        { label: 'Hum. sol',    value: sensors.soil_humidity!= null ? sensors.soil_humidity.toFixed(1) : null, unit: '%',    icon: Leaf },
+        { label: 'Luminosité',  value: sensors.light_level  != null ? sensors.light_level              : null, unit: ' lux', icon: Zap },
+    ];
+
+    const hasSensors   = sensorRows.some(s => s.value != null);
+    const hasActuators = Object.keys(actuators).length > 0;
+
+    return (
+        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-5 flex flex-col gap-4`}>
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Monitor className={`w-4 h-4 ${theme.accent}`} />
+                    <h3 className={`text-sm font-semibold ${theme.text}`}>{device.esp_id}</h3>
+                    {device.serre_id && (
+                        <span className={`text-xs ${theme.textMuted}`}>· {device.serre_id}</span>
+                    )}
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isOnline ? theme.badge : theme.badgeOff}`}>
+                    {isOnline ? '● En ligne' : '○ Hors ligne'}
+                </span>
+            </div>
+
+            {/* Meta: last seen / uptime / WiFi */}
+            <div className={`grid grid-cols-3 gap-3 py-3 border-y ${theme.divider} text-center`}>
+                <div>
+                    <p className={`text-xs ${theme.textLabel} mb-1`}>Dernière vue</p>
+                    <p className={`text-xs font-medium ${theme.text}`}>{lastSeen}</p>
+                </div>
+                <div>
+                    <p className={`text-xs ${theme.textLabel} mb-1`}>Uptime</p>
+                    <p className={`text-xs font-medium ${theme.text}`}>{uptimeStr(device.uptime_s)}</p>
+                </div>
+                <div>
+                    <p className={`text-xs ${theme.textLabel} mb-1`}>WiFi</p>
+                    <div className="flex items-center justify-center gap-1.5">
+                        <SignalBars rssi={device.wifi_rssi} />
+                        <span className={`text-xs ${theme.textMuted}`}>
+                            {device.wifi_rssi != null ? `${device.wifi_rssi} dBm` : '—'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Sensors */}
+            {hasSensors && (
+                <div>
+                    <p className={`text-xs font-semibold uppercase tracking-wide ${theme.textLabel} mb-2`}>Capteurs</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {sensorRows.map(({ label, value, unit, icon: Icon }) => (
+                            <div key={label}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDarkMode ? 'bg-black/20' : 'bg-gray-50'}`}>
+                                <Icon className={`w-3.5 h-3.5 shrink-0 ${theme.textMuted}`} />
+                                <div>
+                                    <p className={`text-xs ${theme.textLabel}`}>{label}</p>
+                                    <p className={`text-sm font-semibold ${theme.text}`}>
+                                        {value != null ? `${value}${unit}` : '—'}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Actuators */}
+            {hasActuators && (
+                <div>
+                    <p className={`text-xs font-semibold uppercase tracking-wide ${theme.textLabel} mb-2`}>Actionneurs</p>
+                    <div className="flex flex-wrap gap-2">
+                        {[
+                            { key: 'pump',       label: 'Pompe',        icon: Waves },
+                            { key: 'fan',        label: 'Ventilateur',  icon: Fan },
+                            { key: 'grow_light', label: 'LED',          icon: Lightbulb },
+                        ].map(({ key, label, icon: Icon }) => {
+                            const active = actuators[key]?.state || false;
+                            return (
+                                <div key={key}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium
+                                        ${active ? theme.badge : theme.badgeOff}`}>
+                                    <Icon className="w-3.5 h-3.5" />
+                                    {label}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Firmware */}
+            {device.firmware_version && (
+                <p className={`text-xs ${theme.textMuted}`}>
+                    Firmware : <span className="font-mono">{device.firmware_version}</span>
+                </p>
+            )}
+        </div>
+    );
+}
+
+function MonitoringPage({ theme, devices }) {
+    const online = devices.filter(d => d.status === 'online').length;
+
+    const serreGroups = devices.reduce((acc, dev) => {
+        const s = dev.serre_id || 'Inconnue';
+        (acc[s] = acc[s] || []).push(dev);
+        return acc;
+    }, {});
+
+    return (
+        <div className="flex flex-col min-h-screen">
+            {/* Header */}
+            <div className={`px-8 pt-8 pb-6 border-b ${theme.divider}`}>
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                        <h1 className={`text-2xl font-bold ${theme.text}`}>Monitoring</h1>
+                        <p className={`text-sm mt-1 ${theme.textMuted}`}>
+                            {Object.keys(serreGroups).length} serre{Object.keys(serreGroups).length !== 1 ? 's' : ''} — {devices.length} module{devices.length !== 1 ? 's' : ''} — {online} en ligne
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2.5 h-2.5 rounded-full ${online > 0 ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`} />
+                        <span className={`text-sm font-medium ${online > 0 ? theme.accent : theme.textMuted}`}>
+                            {online > 0 ? 'Réseau actif' : 'Aucun appareil en ligne'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Cards groupées par serre */}
+            <div className="px-8 py-6 flex flex-col gap-8">
+                {devices.length === 0 ? (
+                    <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-12 text-center`}>
+                        <Monitor className={`w-12 h-12 mx-auto mb-3 ${theme.textMuted} opacity-40`} />
+                        <p className={theme.textMuted}>Aucun appareil détecté — en attente de connexions ESP32</p>
+                    </div>
+                ) : (
+                    Object.entries(serreGroups).map(([serreId, devs]) => {
+                        const onlineInSerre = devs.filter(d => d.status === 'online').length;
+                        return (
+                            <div key={serreId}>
+                                {/* Serre header */}
+                                <div className="flex items-center gap-3 mb-4">
+                                    <Sprout className={`w-4 h-4 ${theme.accent}`} />
+                                    <h2 className={`text-base font-semibold ${theme.text}`}>{serreId}</h2>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${onlineInSerre > 0 ? theme.badge : theme.badgeOff}`}>
+                                        {onlineInSerre}/{devs.length} en ligne
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                    {devs.map(device => (
+                                        <DeviceCard key={device.esp_id} theme={theme} device={device} />
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ============================
+// PLACEHOLDER
+// ============================
+function PlaceholderPage({ theme, label }) {
+    return (
+        <div className="flex items-center justify-center h-64">
+            <p className={`text-lg ${theme.textMuted}`}>{label} — à venir</p>
+        </div>
+    );
+}
+
+// ============================
+// CONTROL CARD (+/-)
+// ============================
+function ControlCard({ theme, title, icon: Icon, currentValue, unit, target, step, decimals, onIncrease, onDecrease }) {
+    return (
+        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-6 flex flex-col gap-5`}>
+            {/* Title */}
+            <div className="flex items-center gap-2">
+                <Icon className={`w-4 h-4 ${theme.accent}`} />
+                <h3 className={`text-sm font-semibold ${theme.accent}`}>{title}</h3>
+            </div>
+
+            {/* Current value */}
+            <div className="flex items-baseline gap-1 justify-center py-2">
+                <span className={`text-5xl font-bold ${theme.accent}`}>
+                    {typeof currentValue === 'number' ? currentValue.toFixed(decimals) : '--'}
+                </span>
+                <span className={`text-xl ${theme.textMuted}`}>{unit}</span>
+            </div>
+
+            {/* +/- buttons */}
+            <div className="flex items-center justify-center gap-5">
+                <button onClick={onDecrease}
+                    className={`w-11 h-11 rounded-full flex items-center justify-center font-bold transition-all duration-150 ${theme.btnMinus}`}>
+                    <Minus className="w-5 h-5" />
+                </button>
+                <button onClick={onIncrease}
+                    className={`w-11 h-11 rounded-full flex items-center justify-center font-bold transition-all duration-150 ${theme.btnPlus}`}>
+                    <Plus className="w-5 h-5" />
+                </button>
+            </div>
+
+            {/* Target value */}
+            <p className={`text-center text-sm ${theme.textMuted}`}>
+                {title} voulue :{' '}
+                <span className={`font-semibold ${theme.text}`}>
+                    {typeof target === 'number' ? target.toFixed(decimals) : '--'}{unit}
+                </span>
+            </p>
+        </div>
+    );
+}
+
+// ============================
+// ACTUATOR SWITCH (MUI)
+// ============================
+function ActuatorSwitch({ theme, label, icon: Icon, isActive, onToggle, disabled }) {
+    return (
+        <div className={`flex items-center justify-between p-4 rounded-xl border ${theme.border} ${theme.cardBg}`}>
+            <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg transition-colors ${isActive ? theme.badge : theme.badgeOff}`}>
+                    <Icon className="w-5 h-5" />
+                </div>
+                <div>
+                    <p className={`text-sm font-medium ${theme.text}`}>{label}</p>
+                    <p className={`text-xs font-medium ${isActive ? theme.accent : theme.textMuted}`}>
+                        {isActive ? 'Actif' : 'Inactif'}
+                    </p>
+                </div>
+            </div>
+
+            <ThemeProvider theme={muiTheme}>
+                <Switch
+                    checked={isActive}
+                    onChange={onToggle}
+                    disabled={disabled}
+                    color="primary"
+                />
+            </ThemeProvider>
+        </div>
+    );
+}
+
+// ============================
+// MODULE CARD (pilotage)
+// ============================
+function ModuleCard({ theme, device, isManual, onSendCommand }) {
+    const sensors   = device.sensors   || {};
+    const actuators = device.actuators || {};
+    const isOnline  = device.status === 'online';
+    const isDarkMode = theme.mainBg === 'bg-[#0f1117]';
+
+    const sensorItems = [
+        { label: 'Température', value: sensors.temperature   != null ? `${sensors.temperature.toFixed(1)}°C`   : '—', icon: Thermometer },
+        { label: 'Hum. air',    value: sensors.air_humidity  != null ? `${sensors.air_humidity.toFixed(1)}%`   : '—', icon: Droplets },
+        { label: 'Hum. sol',    value: sensors.soil_humidity != null ? `${sensors.soil_humidity.toFixed(1)}%`  : '—', icon: Leaf },
+        { label: 'Luminosité',  value: sensors.light_level   != null ? `${sensors.light_level} lux`            : '—', icon: Zap },
+    ];
+
+    return (
+        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-5 flex flex-col gap-4`}>
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Monitor className={`w-4 h-4 ${theme.accent}`} />
+                    <span className={`text-sm font-semibold ${theme.text}`}>{device.esp_id}</span>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isOnline ? theme.badge : theme.badgeOff}`}>
+                    {isOnline ? '● En ligne' : '○ Hors ligne'}
+                </span>
+            </div>
+
+            {/* Sensors (lecture seule) */}
+            <div className="grid grid-cols-2 gap-2">
+                {sensorItems.map(({ label, value, icon: Icon }) => (
+                    <div key={label}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isDarkMode ? 'bg-black/20' : 'bg-gray-50'}`}>
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${theme.textMuted}`} />
+                        <div>
+                            <p className={`text-xs ${theme.textLabel}`}>{label}</p>
+                            <p className={`text-sm font-semibold ${theme.text}`}>{value}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Actionneurs */}
+            <div className={`pt-3 border-t ${theme.divider} flex flex-col gap-2`}>
+                {[
+                    { actuatorKey: 'pump',  registryKey: 'pump',       label: 'Pompe',         icon: Waves },
+                    { actuatorKey: 'fan',   registryKey: 'fan',        label: 'Ventilateur',   icon: Fan },
+                    { actuatorKey: 'led',   registryKey: 'grow_light', label: 'Éclairage LED', icon: Lightbulb },
+                ].map(({ actuatorKey, registryKey, label, icon: Icon }) => (
+                    <ActuatorSwitch
+                        key={actuatorKey}
+                        theme={theme}
+                        label={label}
+                        icon={Icon}
+                        isActive={actuators[registryKey]?.state || false}
+                        disabled={!isManual || !isOnline}
+                        onToggle={(_, checked) => onSendCommand(device.esp_id, device.serre_id, actuatorKey, checked)}
+                    />
+                ))}
+            </div>
+
+            {!isOnline && (
+                <p className={`text-xs text-center ${theme.textMuted}`}>Module hors ligne — commandes indisponibles</p>
+            )}
+        </div>
+    );
+}
+
+// ============================
+// MANUAL PAGE
+// ============================
+function ManualPage({ theme, currentData, thresholds, onThresholdsChange, devices }) {
+    const [mode, setMode]           = useState('auto');
+    const [airTarget, setAirTarget] = useState(60);
+    const [sending, setSending]     = useState(false);
+
+    // Grouper les modules par serre
+    const serreGroups = devices.reduce((acc, dev) => {
+        const s = dev.serre_id || 'Inconnue';
+        (acc[s] = acc[s] || []).push(dev);
+        return acc;
+    }, {});
+
+    // Seuils → cibles d'affichage dans les ControlCards
+    const sensors = currentData?.sensors || {};
+    const targets = {
+        temp:  thresholds.temp_high,
+        air:   airTarget,
+        soil:  thresholds.soil_low,
+        light: thresholds.light_low,
+    };
+
+    // Charger le mode actuel depuis le backend
+    useEffect(() => {
+        fetch(`${BACKEND_API_URL}/api/autopilot`)
+            .then(r => r.json())
+            .then(({ enabled }) => setMode(enabled ? 'auto' : 'manual'))
+            .catch(() => {});
+    }, []);
+
+    const toggleMode = async () => {
+        const next = mode === 'auto' ? 'manual' : 'auto';
+        await fetch(`${BACKEND_API_URL}/api/autopilot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: next === 'auto' }),
+        }).catch(() => {});
+        setMode(next);
+    };
+
+    const adjust = async (key, delta) => {
+        if (key === 'air') { setAirTarget(v => +(v + delta).toFixed(1)); return; }
+        const thresholdMap = {
+            temp:  { temp_high: +(thresholds.temp_high + delta).toFixed(1), temp_low: +(thresholds.temp_low + delta).toFixed(1) },
+            soil:  { soil_low:  +(thresholds.soil_low  + delta).toFixed(1), soil_high: +(thresholds.soil_high + delta).toFixed(1) },
+            light: { light_low: +(thresholds.light_low + delta).toFixed(0), light_high: +(thresholds.light_high + delta).toFixed(0) },
+        };
+        const patch = thresholdMap[key];
+        if (!patch) return;
+        onThresholdsChange({ ...thresholds, ...patch });
+        await fetch(`${BACKEND_API_URL}/api/thresholds`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch),
+        }).catch(() => {});
+    };
+
+    const sendCommand = async (espId, serreId, actuatorName, newState) => {
+        if (sending) return;
+        setSending(true);
+        const commands = { [actuatorName]: { state: newState } };
+        if (actuatorName === 'led') commands.led.intensity_pct = newState ? 80 : 0;
+        await fetch(`${BACKEND_API_URL}/command`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'manual_command', esp_id: espId, serre_id: serreId, source: 'manual', commands }),
+        }).catch(() => {});
+        setSending(false);
+    };
+
+    const isManual = mode === 'manual';
+
+    return (
+        <div className="flex flex-col min-h-screen">
+            {/* ── Header ─────────────────────────────────────────── */}
+            <div className={`px-8 pt-8 pb-6 border-b ${theme.divider}`}>
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h1 className={`text-2xl font-bold ${theme.text}`}>Pilotage manuel</h1>
+                        <p className={`text-sm mt-1 ${theme.textMuted}`}>
+                            {isManual
+                                ? 'Contrôle direct des actionneurs — autopilote désactivé'
+                                : "L'autopilote ajuste automatiquement selon les seuils ci-dessous"}
+                        </p>
+                    </div>
+                    <div className={`flex items-center p-1 rounded-xl border ${theme.border} ${theme.cardBg}`}>
+                        <button onClick={toggleMode}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                                ${!isManual ? 'bg-green-500 text-white shadow-sm' : theme.textMuted}`}>
+                            <Bot className="w-4 h-4" />
+                            Automatique
+                        </button>
+                        <button onClick={toggleMode}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                                ${isManual ? 'bg-green-500 text-white shadow-sm' : theme.textMuted}`}>
+                            <SlidersHorizontal className="w-4 h-4" />
+                            Manuel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Seuils globaux (ControlCards) ──────────────────── */}
+            <div className="px-8 pt-6">
+                <p className={`text-xs font-semibold uppercase tracking-wide ${theme.textLabel} mb-4`}>
+                    Seuils autopilote — appliqués à tous les modules
+                </p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <ControlCard
+                        theme={theme} title="Température" icon={Thermometer}
+                        currentValue={sensors.temperature} unit="°C"
+                        target={targets.temp} step={0.5} decimals={1}
+                        onIncrease={() => adjust('temp', 0.5)}
+                        onDecrease={() => adjust('temp', -0.5)}
+                    />
+                    <ControlCard
+                        theme={theme} title="Humidité de l'air" icon={Droplets}
+                        currentValue={sensors.air_humidity} unit="%"
+                        target={targets.air} step={1} decimals={1}
+                        onIncrease={() => adjust('air', 1)}
+                        onDecrease={() => adjust('air', -1)}
+                    />
+                    <ControlCard
+                        theme={theme} title="Humidité du sol" icon={Leaf}
+                        currentValue={sensors.soil_humidity} unit="%"
+                        target={targets.soil} step={1} decimals={1}
+                        onIncrease={() => adjust('soil', 1)}
+                        onDecrease={() => adjust('soil', -1)}
+                    />
+                    <ControlCard
+                        theme={theme} title="Luminosité" icon={Zap}
+                        currentValue={sensors.light_level} unit=" lux"
+                        target={targets.light} step={50} decimals={0}
+                        onIncrease={() => adjust('light', 50)}
+                        onDecrease={() => adjust('light', -50)}
+                    />
+                </div>
+            </div>
+
+            {/* ── Modules par serre ──────────────────────────────── */}
+            <div className="px-8 py-8 flex flex-col gap-8">
+                {devices.length === 0 ? (
+                    <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-12 text-center`}>
+                        <Monitor className={`w-12 h-12 mx-auto mb-3 ${theme.textMuted} opacity-40`} />
+                        <p className={`${theme.textMuted} text-sm`}>Aucun module détecté — en attente de connexions</p>
+                    </div>
+                ) : (
+                    Object.entries(serreGroups).map(([serreId, devs]) => {
+                        const onlineCount = devs.filter(d => d.status === 'online').length;
+                        return (
+                            <div key={serreId}>
+                                {/* En-tête serre */}
+                                <div className="flex items-center gap-3 mb-4">
+                                    <Sprout className={`w-4 h-4 ${theme.accent}`} />
+                                    <h2 className={`text-base font-semibold ${theme.text}`}>{serreId}</h2>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${onlineCount > 0 ? theme.badge : theme.badgeOff}`}>
+                                        {onlineCount}/{devs.length} en ligne
+                                    </span>
+                                    {isManual
+                                        ? <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${theme.badge}`}>Contrôle direct actif</span>
+                                        : <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${theme.badgeOff}`}>Géré par l'autopilote</span>
+                                    }
+                                </div>
+
+                                {/* Cards des modules */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                    {devs.map(device => (
+                                        <ModuleCard
+                                            key={device.esp_id}
+                                            theme={theme}
+                                            device={device}
+                                            isManual={isManual}
+                                            onSendCommand={sendCommand}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+
+                {!isManual && devices.length > 0 && (
+                    <p className={`text-xs text-center ${theme.textMuted}`}>
+                        Passez en mode <span className="font-medium">Manuel</span> pour contrôler les actionneurs directement.
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ============================
+// MAIN APP
+// ============================
+export default function App() {
+    const [isDark, setIsDark]         = useState(true);
+    const [activePage, setActivePage] = useState('dashboard');
     const [currentData, setCurrentData] = useState(null);
     const [historyData, setHistoryData] = useState([]);
     const [isConnected, setIsConnected] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const wsRef = useRef(null);
+    const [devices, setDevices]         = useState([]);
+    const [thresholds, setThresholds] = useState({
+        temp_high: 28, temp_low: 24,
+        soil_low:  30, soil_high: 60,
+        light_low: 300, light_high: 800,
+    });
+
+    const wsRef        = useRef(null);
     const reconnectRef = useRef(null);
+    const theme        = isDark ? THEMES.dark : THEMES.light;
 
     useEffect(() => {
-        // Charger l'historique existant au démarrage
+        // Historique
         fetch(`${BACKEND_API_URL}/api/history`)
             .then(r => r.json())
             .then(data => {
-                if (data.length > 0) {
-                    setHistoryData(data);
-                    setCurrentData(data[0]);
-                }
-                setLoading(false);
+                if (data.length > 0) { setHistoryData(data); setCurrentData(data[0]); }
             })
-            .catch(() => setLoading(false));
+            .catch(() => {});
 
-        // Connexion WebSocket avec reconnexion automatique
+        // Seuils autopilote
+        fetch(`${BACKEND_API_URL}/api/autopilot`)
+            .then(r => r.json())
+            .then(({ thresholds: t }) => { if (t) setThresholds(t); })
+            .catch(() => {});
+
+        // Appareils connus
+        fetch(`${BACKEND_API_URL}/api/devices`)
+            .then(r => r.json())
+            .then(data => { if (Array.isArray(data)) setDevices(data); })
+            .catch(() => {});
+
         const connect = () => {
             const ws = new WebSocket(BACKEND_WS_URL);
             wsRef.current = ws;
 
             ws.onopen = () => {
                 setIsConnected(true);
-                if (reconnectRef.current) {
-                    clearTimeout(reconnectRef.current);
-                    reconnectRef.current = null;
-                }
+                if (reconnectRef.current) { clearTimeout(reconnectRef.current); reconnectRef.current = null; }
             };
-
             ws.onmessage = (event) => {
                 const msg = JSON.parse(event.data);
-
                 if (msg.type === 'update') {
                     setCurrentData(msg.data);
-                    setHistoryData(prev => {
-                        const next = [msg.data, ...prev];
-                        return next.slice(0, 20);
-                    });
+                    setHistoryData(prev => [msg.data, ...prev].slice(0, 20));
                 } else if (msg.type === 'history') {
                     setHistoryData(msg.data);
                     if (msg.data.length > 0) setCurrentData(msg.data[0]);
-                    setLoading(false);
+                } else if (msg.type === 'devices') {
+                    setDevices(msg.data);
                 }
             };
-
-            ws.onclose = () => {
-                setIsConnected(false);
-                reconnectRef.current = setTimeout(connect, 3000);
-            };
-
-            ws.onerror = () => {
-                ws.close();
-            };
+            ws.onclose = () => { setIsConnected(false); reconnectRef.current = setTimeout(connect, 3000); };
+            ws.onerror = () => ws.close();
         };
 
         connect();
-
         return () => {
             if (reconnectRef.current) clearTimeout(reconnectRef.current);
-            if (wsRef.current) {
-                wsRef.current.onclose = null; // Empêcher la reconnexion au démontage
-                wsRef.current.close();
-            }
+            if (wsRef.current) { wsRef.current.onclose = null; wsRef.current.close(); }
         };
     }, []);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500 mx-auto mb-4"></div>
-                    <p className="text-gray-400 text-lg">Connexion au backend...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!currentData) {
-        return (
-            <div className="min-h-screen bg-gray-900">
-                <Header isConnected={isConnected} lastUpdate={null} />
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="bg-gray-800 rounded-xl p-8 text-center border border-gray-700">
-                        <WifiOff className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                        <h2 className="text-2xl font-bold text-gray-400 mb-2">Aucune donnée disponible</h2>
-                        <p className="text-gray-500">
-                            En attente des données du simulateur...
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    const sensors = currentData.sensors || {};
-    const actuators = currentData.actuators || null;
-    const aiContext = currentData.ai_context || null;
-
-    const tempCritical = (sensors.temperature || 0) > 25;
-    const soilCritical = (sensors.soil_humidity || 0) < 30;
+    const renderPage = () => {
+        switch (activePage) {
+            case 'dashboard':  return <DashboardPage theme={theme} historyData={historyData} devices={devices} />;
+            case 'manual':     return <ManualPage theme={theme} currentData={currentData} thresholds={thresholds} onThresholdsChange={setThresholds} devices={devices} />;
+            case 'analysis':   return <AnalysisPage theme={theme} currentData={currentData} historyData={historyData} />;
+            case 'history':    return <HistoryPage theme={theme} historyData={historyData} thresholds={thresholds} />;
+            case 'monitoring': return <MonitoringPage theme={theme} devices={devices} />;
+            default:           return <PlaceholderPage theme={theme} label={NAV_MAIN.find(n => n.id === activePage)?.label || activePage} />;
+        }
+    };
 
     return (
-        <div className="min-h-screen bg-gray-900">
-            <Header isConnected={isConnected} lastUpdate={currentData.timestamp} />
-
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="space-y-6">
-                    <AIBrain aiContext={aiContext} />
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <SensorCard
-                            icon={Thermometer}
-                            label="Température"
-                            value={sensors.temperature}
-                            unit="°C"
-                            isCritical={tempCritical}
-                        />
-                        <SensorCard
-                            icon={Droplets}
-                            label="Humidité Air"
-                            value={sensors.air_humidity}
-                            unit="%"
-                            isCritical={false}
-                        />
-                        <SensorCard
-                            icon={Sprout}
-                            label="Humidité Sol"
-                            value={sensors.soil_humidity}
-                            unit="%"
-                            isCritical={soilCritical}
-                        />
-                        <SensorCard
-                            icon={Sun}
-                            label="Luminosité"
-                            value={sensors.light_level}
-                            unit="lux"
-                            isCritical={false}
-                        />
-                    </div>
-
-                    <ActuatorStatus actuators={actuators} />
-
-                    <HistoryChart data={historyData} />
-                </div>
+        <div className={`flex min-h-screen ${theme.mainBg} transition-colors duration-300`}>
+            <Sidebar
+                theme={theme} isDark={isDark}
+                activePage={activePage} setActivePage={setActivePage}
+                toggleTheme={() => setIsDark(d => !d)}
+            />
+            <main className="flex-1 overflow-auto">
+                {renderPage()}
             </main>
         </div>
     );
 }
-
-export default App;

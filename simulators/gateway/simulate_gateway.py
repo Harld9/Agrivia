@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 MQTT_BROKER  = os.getenv("MQTT_BROKER", "localhost")
 MQTT_PORT    = int(os.getenv("MQTT_PORT", "1883"))
+MQTT_WS      = os.getenv("MQTT_WS", "false").lower() == "true"
 WS_URL       = os.getenv("BACKEND_WS_URL", "ws://localhost:3000/ws")
 SERRE_ID     = os.getenv("SERRE_ID", "serre_01")
 RASPBERRY_ID = os.getenv("RASPBERRY_ID", "rpi_01")
@@ -42,7 +43,7 @@ async def run_gateway():
     loop = asyncio.get_event_loop()
 
     # Configurer le client MQTT
-    mqtt_client = mqtt.Client(client_id=RASPBERRY_ID)
+    mqtt_client = mqtt.Client(client_id=RASPBERRY_ID, transport="websockets" if MQTT_WS else "tcp")
     mqtt_client.user_data_set({"loop": loop})
     mqtt_client.on_connect = on_mqtt_connect
     mqtt_client.on_message = on_mqtt_message
