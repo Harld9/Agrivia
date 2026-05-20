@@ -1,3 +1,4 @@
+// Agrivia — backend API + WebSocket (déployé sur Render)
 const { WebSocketServer, WebSocket } = require("ws");
 const http = require("http");
 
