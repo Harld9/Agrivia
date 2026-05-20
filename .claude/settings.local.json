@@ -5,7 +5,8 @@
       "Bash(npm install *)",
       "Bash(npm list *)",
       "Bash(where cloudflared *)",
-      "PowerShell(Get-Command *)"
+      "PowerShell(Get-Command *)",
+      "Bash(docker compose *)"
     ]
   }
 }

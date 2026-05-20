@@ -1,206 +1,28 @@
-## render.yaml — Agrivia : Blueprint Render
+## render.yaml — Agrivia : déploiement du backend (100 % gratuit)
 ##
-## TIERS REQUIS :
-##   - Frontend (static)  → gratuit
-##   - Backend  (web)     → gratuit (s'endort après 15 min d'inactivité)
-##   - Mosquitto (pserv)  → Starter (~7 $/mois) — sinon utiliser HiveMQ Cloud gratuit
-##   - Simulateurs (worker) → Starter (~7 $/mois)
+## ARCHITECTURE
+##   - Backend Node.js          -> Render (ce fichier) — plan gratuit
+##   - Mosquitto + simulateurs  -> en local via docker-compose.yml
 ##
-## PREMIER DÉPLOIEMENT :
-##   1. Connecter ce repo GitHub dans le dashboard Render → "New Blueprint"
-##   2. Laisser Render créer tous les services
-##   3. Copier l'URL publique du backend  (ex: https://agrivia-backend.onrender.com)
-##   4. Dans Render Dashboard → agrivia-frontend → Environment :
-##        VITE_BACKEND_API_URL = https://agrivia-backend.onrender.com
-##        VITE_BACKEND_WS_URL  = wss://agrivia-backend.onrender.com
-##   5. Redéclencher le deploy du frontend (pour rebaker les env vars dans Vite)
+## DÉPLOIEMENT
+##   1. Render Dashboard -> New -> Blueprint
+##   2. Sélectionner ce repo GitHub et valider
+##   3. Render crée le service "agrivia-backend" et le déploie
+##   4. Copier l'URL publique fournie (ex: https://agrivia-backend.onrender.com)
+##   5. La reporter dans le fichier .env à la racine du repo (variable
+##      BACKEND_WS_URL) pour que les simulateurs locaux s'y connectent.
 ##
-## GITHUB ACTIONS :
-##   Ajouter ces secrets dans Settings → Secrets → Actions du repo :
-##     VITE_BACKEND_WS_URL   → wss://agrivia-backend.onrender.com
-##     VITE_BACKEND_API_URL  → https://agrivia-backend.onrender.com
-##     RENDER_DEPLOY_BACKEND → URL deploy hook (Render Dashboard → Settings → Deploy Hook)
-##     RENDER_DEPLOY_FRONTEND→ URL deploy hook du frontend
+## NOTE : le plan gratuit s'endort après 15 min sans trafic
+##        (réveil ~50 s à la requête suivante). Les WebSockets fonctionnent.
 
 services:
 
-  # ── 1. Backend Node.js ─────────────────────────────────────────────────────
   - type: web
     name: agrivia-backend
     runtime: docker
+    plan: free
+    region: frankfurt
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    envVars:
-      # Render injecte PORT=10000 — on le mappe sur WS_PORT utilisé par le backend
-      - key: WS_PORT
-        value: "10000"
-    autoDeploy: true
-
-  # ── 2. Frontend React (site statique) ──────────────────────────────────────
-  - type: web
-    name: agrivia-frontend
-    runtime: static
-    buildCommand: cd front && npm ci && npm run build
-    staticPublishPath: ./front/dist
-    envVars:
-      # À renseigner manuellement après le 1er deploy du backend (voir ci-dessus)
-      - key: VITE_BACKEND_API_URL
-        sync: false
-      - key: VITE_BACKEND_WS_URL
-        sync: false
-    autoDeploy: true
-
-  # ── 3. Broker MQTT (WebSocket sur port 10000) ──────────────────────────────
-  # Requiert le plan Starter. Alternative gratuite : HiveMQ Cloud (https://www.hivemq.com/mqtt-cloud-broker/)
-  - type: pserv
-    name: agrivia-mosquitto
-    runtime: docker
-    dockerfilePath: ./mosquitto/Dockerfile
-    dockerContext: ./mosquitto
-    autoDeploy: true
-
-  # ── 4. Gateway simulateur — Serre 01 ───────────────────────────────────────
-  - type: worker
-    name: agrivia-gateway-1
-    runtime: docker
-    dockerfilePath: ./simulators/gateway/Dockerfile
-    dockerContext: ./simulators/gateway
-    envVars:
-      - key: MQTT_BROKER
-        fromService:
-          name: agrivia-mosquitto
-          type: pserv
-          property: host
-      - key: MQTT_PORT
-        value: "10000"
-      - key: MQTT_WS
-        value: "true"
-      - key: BACKEND_WS_URL
-        # À renseigner : wss://agrivia-backend.onrender.com/ws
-        sync: false
-      - key: SERRE_ID
-        value: serre_01
-      - key: RASPBERRY_ID
-        value: rpi_01
-      - key: AUTH_TOKEN
-        value: RASPBERRY_SECRET_TOKEN
-    autoDeploy: true
-
-  # ── 5. Gateway simulateur — Serre 02 ───────────────────────────────────────
-  - type: worker
-    name: agrivia-gateway-2
-    runtime: docker
-    dockerfilePath: ./simulators/gateway/Dockerfile
-    dockerContext: ./simulators/gateway
-    envVars:
-      - key: MQTT_BROKER
-        fromService:
-          name: agrivia-mosquitto
-          type: pserv
-          property: host
-      - key: MQTT_PORT
-        value: "10000"
-      - key: MQTT_WS
-        value: "true"
-      - key: BACKEND_WS_URL
-        sync: false
-      - key: SERRE_ID
-        value: serre_02
-      - key: RASPBERRY_ID
-        value: rpi_02
-      - key: AUTH_TOKEN
-        value: RASPBERRY_SECRET_TOKEN
-    autoDeploy: true
-
-  # ── 6-9. Simulateurs ESP32 ─────────────────────────────────────────────────
-  - type: worker
-    name: agrivia-esp32-1
-    runtime: docker
-    dockerfilePath: ./simulators/esp32/Dockerfile
-    dockerContext: ./simulators/esp32
-    envVars:
-      - key: MQTT_BROKER
-        fromService:
-          name: agrivia-mosquitto
-          type: pserv
-          property: host
-      - key: MQTT_PORT
-        value: "10000"
-      - key: MQTT_WS
-        value: "true"
-      - key: SERRE_ID
-        value: serre_01
-      - key: ESP_ID
-        value: esp32_001
-      - key: SEND_INTERVAL
-        value: "10"
-    autoDeploy: true
-
-  - type: worker
-    name: agrivia-esp32-2
-    runtime: docker
-    dockerfilePath: ./simulators/esp32/Dockerfile
-    dockerContext: ./simulators/esp32
-    envVars:
-      - key: MQTT_BROKER
-        fromService:
-          name: agrivia-mosquitto
-          type: pserv
-          property: host
-      - key: MQTT_PORT
-        value: "10000"
-      - key: MQTT_WS
-        value: "true"
-      - key: SERRE_ID
-        value: serre_01
-      - key: ESP_ID
-        value: esp32_002
-      - key: SEND_INTERVAL
-        value: "10"
-    autoDeploy: true
-
-  - type: worker
-    name: agrivia-esp32-3
-    runtime: docker
-    dockerfilePath: ./simulators/esp32/Dockerfile
-    dockerContext: ./simulators/esp32
-    envVars:
-      - key: MQTT_BROKER
-        fromService:
-          name: agrivia-mosquitto
-          type: pserv
-          property: host
-      - key: MQTT_PORT
-        value: "10000"
-      - key: MQTT_WS
-        value: "true"
-      - key: SERRE_ID
-        value: serre_02
-      - key: ESP_ID
-        value: esp32_003
-      - key: SEND_INTERVAL
-        value: "10"
-    autoDeploy: true
-
-  - type: worker
-    name: agrivia-esp32-4
-    runtime: docker
-    dockerfilePath: ./simulators/esp32/Dockerfile
-    dockerContext: ./simulators/esp32
-    envVars:
-      - key: MQTT_BROKER
-        fromService:
-          name: agrivia-mosquitto
-          type: pserv
-          property: host
-      - key: MQTT_PORT
-        value: "10000"
-      - key: MQTT_WS
-        value: "true"
-      - key: SERRE_ID
-        value: serre_02
-      - key: ESP_ID
-        value: esp32_004
-      - key: SEND_INTERVAL
-        value: "10"
+    healthCheckPath: /api/current
     autoDeploy: true
