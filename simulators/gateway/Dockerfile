@@ -4,6 +4,6 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir paho-mqtt websockets
 
-COPY simulate_gateway.py .
+COPY *.py .
 
 CMD ["python", "-u", "simulate_gateway.py"]

@@ -4,6 +4,6 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir paho-mqtt
 
-COPY simulate_esp32.py .
+COPY *.py .
 
 CMD ["python", "-u", "simulate_esp32.py"]

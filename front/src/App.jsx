@@ -19,6 +19,9 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend,
     ResponsiveContainer,
 } from 'recharts';
+import {
+    computeStats, uptimeStr, rssiLevel, applyWsMessage, thresholdPatch,
+} from './lib/sensors.js';
 
 const BACKEND_WS_URL  = import.meta.env.VITE_BACKEND_WS_URL  || 'ws://localhost:3000';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3000';
@@ -477,27 +480,8 @@ function DashboardPage({ theme, historyData, devices }) {
 
 // ============================
 // ANALYSIS HELPERS
+// computeStats lives in ./lib/sensors.js (imported above)
 // ============================
-function computeStats(values) {
-    const v = values.filter(x => x != null && !isNaN(x));
-    if (v.length === 0) return { min: null, max: null, avg: null, slope: 0, next: null };
-    const min = Math.min(...v);
-    const max = Math.max(...v);
-    const avg = v.reduce((a, b) => a + b, 0) / v.length;
-    // Régression linéaire sur les 6 derniers points
-    const r = v.slice(-6);
-    const n = r.length;
-    let slope = 0;
-    if (n >= 2) {
-        const mx = (n - 1) / 2;
-        const my = r.reduce((a, b) => a + b, 0) / n;
-        const num = r.reduce((acc, y, x) => acc + (x - mx) * (y - my), 0);
-        const den = r.reduce((acc, _, x) => acc + (x - mx) ** 2, 0);
-        slope = den !== 0 ? num / den : 0;
-    }
-    return { min, max, avg, slope, next: v[v.length - 1] + slope };
-}
-
 function TrendArrow({ slope, unit, decimals = 1 }) {
     const abs = Math.abs(slope);
     if (abs < 0.05) return <span className="text-gray-400 font-medium">→ stable</span>;
@@ -835,7 +819,7 @@ function HistoryPage({ theme, historyData, thresholds }) {
 // MONITORING PAGE
 // ============================
 function SignalBars({ rssi }) {
-    const level = rssi == null ? 0 : rssi > -60 ? 4 : rssi > -70 ? 3 : rssi > -80 ? 2 : 1;
+    const level = rssiLevel(rssi);
     return (
         <div className="flex items-end gap-0.5 h-4">
             {[1, 2, 3, 4].map(i => (
@@ -848,12 +832,7 @@ function SignalBars({ rssi }) {
     );
 }
 
-function uptimeStr(s) {
-    if (!s) return '—';
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    return h > 0 ? `${h}h ${m}min` : `${m}min`;
-}
+// uptimeStr lives in ./lib/sensors.js (imported above)
 
 function DeviceCard({ theme, device }) {
     const isOnline = device.status === 'online';
@@ -1228,12 +1207,7 @@ function ManualPage({ theme, currentData, thresholds, onThresholdsChange, device
 
     const adjust = async (key, delta) => {
         if (key === 'air') { setAirTarget(v => +(v + delta).toFixed(1)); return; }
-        const thresholdMap = {
-            temp:  { temp_high: +(thresholds.temp_high + delta).toFixed(1), temp_low: +(thresholds.temp_low + delta).toFixed(1) },
-            soil:  { soil_low:  +(thresholds.soil_low  + delta).toFixed(1), soil_high: +(thresholds.soil_high + delta).toFixed(1) },
-            light: { light_low: +(thresholds.light_low + delta).toFixed(0), light_high: +(thresholds.light_high + delta).toFixed(0) },
-        };
-        const patch = thresholdMap[key];
+        const patch = thresholdPatch(key, thresholds, delta);
         if (!patch) return;
         onThresholdsChange({ ...thresholds, ...patch });
         await fetch(`${BACKEND_API_URL}/api/thresholds`, {
@@ -1430,12 +1404,13 @@ export default function App() {
                 const msg = JSON.parse(event.data);
                 if (msg.type === 'update') {
                     setCurrentData(msg.data);
-                    setHistoryData(prev => [msg.data, ...prev].slice(0, 20));
+                    setHistoryData(prev => applyWsMessage(msg, { historyData: prev }).historyData);
                 } else if (msg.type === 'history') {
-                    setHistoryData(msg.data);
-                    if (msg.data.length > 0) setCurrentData(msg.data[0]);
+                    const patch = applyWsMessage(msg, {});
+                    setHistoryData(patch.historyData);
+                    if (patch.currentData !== undefined) setCurrentData(patch.currentData);
                 } else if (msg.type === 'devices') {
-                    setDevices(msg.data);
+                    setDevices(applyWsMessage(msg, {}).devices);
                 }
             };
             ws.onclose = () => { setIsConnected(false); reconnectRef.current = setTimeout(connect, 3000); };

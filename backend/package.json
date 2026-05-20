@@ -2,6 +2,11 @@
   "name": "agrivia-backend",
   "version": "1.0.0",
   "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage"
+  },
   "dependencies": {
     "ws": "^8.18.0"
   }

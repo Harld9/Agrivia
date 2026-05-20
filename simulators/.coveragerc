@@ -1,0 +1,7 @@
+# Couverture : on mesure la logique métier testable.
+# Les scripts d'entrée (boucles MQTT/WebSocket) sont exclus — non testables unitairement.
+[run]
+omit =
+    */simulate_*.py
+    */tests/*
+    */conftest.py
