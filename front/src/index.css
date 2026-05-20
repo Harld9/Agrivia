@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Dark Mode Styles */
+@layer base {
+  body {
+    @apply bg-gray-900 text-gray-100;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+/* Custom Scrollbar for Dark Mode */
+@layer utilities {
+
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-700 rounded-lg;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-600;
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(55, 65, 81) rgb(31, 41, 55);
+  }
+}
+
+/* Custom AI Brain Pulse Animation */
+@keyframes ai-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes glow-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6), 0 0 30px rgba(34, 197, 94, 0.4);
+  }
+}
+
+@keyframes alert-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6), 0 0 30px rgba(239, 68, 68, 0.4);
+  }
+}
+
+/* Custom Utility Classes */
+@layer utilities {
+  .animate-ai-pulse {
+    animation: ai-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  .animate-alert-pulse {
+    animation: alert-pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Glassmorphism effect */
+  .glass-effect {
+    background: rgba(31, 41, 55, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}

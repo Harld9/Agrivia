@@ -1,0 +1,94 @@
+services:
+
+  # Broker MQTT — simule le rôle du Raspberry Pi (broker local)
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: agrivia_mosquitto
+    ports:
+      - "1883:1883"   # MQTT
+      - "9001:9001"   # WebSocket MQTT (optionnel)
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - agrivia_net
+    restart: unless-stopped
+
+  # Backend Node.js
+  backend:
+    build: ./backend
+    container_name: agrivia_backend
+    ports:
+      - "3000:3000"
+    environment:
+      WS_PORT: 3000
+    depends_on:
+      - mosquitto
+    networks:
+      - agrivia_net
+    restart: unless-stopped
+
+  # Simulateur Gateway — simule le Raspberry Pi (relais MQTT → WebSocket)
+  gateway_sim:
+    build: ./simulators/gateway
+    container_name: agrivia_gateway
+    environment:
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: "1883"
+      BACKEND_WS_URL: ws://backend:3000/ws
+      SERRE_ID: serre_01
+      RASPBERRY_ID: rpi_01
+      AUTH_TOKEN: RASPBERRY_SECRET_TOKEN
+    depends_on:
+      - mosquitto
+      - backend
+    networks:
+      - agrivia_net
+    restart: unless-stopped
+
+  # Simulateur ESP32 n°1
+  esp32_sim_1:
+    build: ./simulators/esp32
+    container_name: agrivia_esp32_001
+    environment:
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: "1883"
+      SERRE_ID: serre_01
+      ESP_ID: esp32_001
+      SEND_INTERVAL: "10"   # secondes entre chaque mesure
+    depends_on:
+      - mosquitto
+    networks:
+      - agrivia_net
+    restart: unless-stopped
+
+  # Simulateur ESP32 n°2 (optionnel — commenter si pas besoin)
+  esp32_sim_2:
+    build: ./simulators/esp32
+    container_name: agrivia_esp32_002
+    environment:
+      MQTT_BROKER: mosquitto
+      MQTT_PORT: "1883"
+      SERRE_ID: serre_01
+      ESP_ID: esp32_002
+      SEND_INTERVAL: "10"
+    depends_on:
+      - mosquitto
+    networks:
+      - agrivia_net
+    restart: unless-stopped
+
+  # Frontend React (servi par nginx)
+  frontend:
+    build: ./front
+    container_name: agrivia_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - agrivia_net
+    restart: unless-stopped
+
+networks:
+  agrivia_net:
+    driver: bridge
