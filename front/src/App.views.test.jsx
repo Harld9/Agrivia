@@ -698,8 +698,10 @@ describe('websocket lifecycle', () => {
         expect(await screen.findByRole('heading', { name: 'Serre A' })).toBeInTheDocument();
 
         // Threshold bootstrap reflects in the history page legend (temp_high 31).
+        // The legend appears in both the desktop table footer and the mobile
+        // card footer, so scope to "all" rather than a single match.
         await navigate(user, /Historique/i);
-        expect(await screen.findByText(/31°C/)).toBeInTheDocument();
+        await waitFor(() => expect(screen.getAllByText(/31°C/).length).toBeGreaterThan(0));
     });
 
     it('ignores unknown websocket message types without crashing', async () => {

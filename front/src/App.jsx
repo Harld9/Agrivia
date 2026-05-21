@@ -5,6 +5,7 @@ import {
     User, Settings, Sprout, Sun, Moon, Calendar,
     Thermometer, Droplets, Leaf, Zap,
     Bot, Waves, Fan, Lightbulb, Plus, Minus, Monitor,
+    Menu, X,
 } from 'lucide-react';
 import Switch from '@mui/material/Switch';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -101,11 +102,29 @@ const NAV_SECONDARY = [
 ];
 
 // ============================
-// SIDEBAR
+// CONNECTION INDICATOR
 // ============================
-function Sidebar({ theme, isDark, activePage, setActivePage, toggleTheme }) {
+function ConnectionIndicator({ theme, isConnected }) {
     return (
-        <aside className={`w-60 min-h-screen flex flex-col shrink-0 ${theme.sidebarBg} border-r ${theme.divider}`}>
+        <div className="flex items-center gap-2">
+            <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`} />
+            <span className={`text-xs font-medium ${isConnected ? theme.accent : theme.textMuted}`}>
+                {isConnected ? 'Connecté' : 'Déconnecté'}
+            </span>
+        </div>
+    );
+}
+
+// ============================
+// SIDEBAR CONTENT (shared by desktop aside + mobile drawer)
+// ============================
+function SidebarBody({ theme, isDark, activePage, setActivePage, toggleTheme, isConnected, onNavigate }) {
+    const handleNav = (id) => {
+        setActivePage(id);
+        if (onNavigate) onNavigate();
+    };
+    return (
+        <>
             <div className="px-6 pt-8 pb-6">
                 <div className="flex items-center gap-2 mb-5">
                     <Sprout className={`w-7 h-7 ${theme.accent}`} />
@@ -119,8 +138,8 @@ function Sidebar({ theme, isDark, activePage, setActivePage, toggleTheme }) {
 
             <nav className="flex-1 px-3 py-4 space-y-1">
                 {NAV_MAIN.map(({ id, label, icon: Icon }) => (
-                    <button key={id} onClick={() => setActivePage(id)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm font-medium transition-all duration-150 text-left
+                    <button key={id} onClick={() => handleNav(id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-r-lg text-sm font-medium transition-all duration-150 text-left
                             ${activePage === id ? theme.navActive : theme.navInactive}`}>
                         <Icon className="w-4 h-4 shrink-0" />
                         {label}
@@ -128,8 +147,8 @@ function Sidebar({ theme, isDark, activePage, setActivePage, toggleTheme }) {
                 ))}
                 <div className={`my-3 border-t ${theme.divider}`} />
                 {NAV_SECONDARY.map(({ id, label, icon: Icon }) => (
-                    <button key={id} onClick={() => setActivePage(id)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm font-medium transition-all duration-150 text-left
+                    <button key={id} onClick={() => handleNav(id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-r-lg text-sm font-medium transition-all duration-150 text-left
                             ${activePage === id ? theme.navActive : theme.navInactive}`}>
                         <Icon className="w-4 h-4 shrink-0" />
                         {label}
@@ -140,16 +159,95 @@ function Sidebar({ theme, isDark, activePage, setActivePage, toggleTheme }) {
             <div className="px-4 pb-6 space-y-4">
                 <div className={`border-t ${theme.divider} mb-4`} />
                 <button onClick={toggleTheme}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${theme.toggleBg} ${theme.textMuted}`}>
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-lg text-sm font-medium transition-all duration-150 ${theme.toggleBg} ${theme.textMuted}`}>
                     {isDark ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
                     {isDark ? 'Thème clair' : 'Thème sombre'}
                 </button>
-                <div className="flex items-center gap-2 px-3 pt-2">
-                    <Sprout className={`w-5 h-5 ${theme.accent} opacity-40`} />
-                    <span className={`text-sm font-semibold ${theme.accent} opacity-40`}>Agrivía</span>
+                {onNavigate
+                    ? (
+                        <div className="px-3 pt-2">
+                            <ConnectionIndicator theme={theme} isConnected={isConnected} />
+                        </div>
+                    )
+                    : (
+                        <div className="flex items-center gap-2 px-3 pt-2">
+                            <Sprout className={`w-5 h-5 ${theme.accent} opacity-40`} />
+                            <span className={`text-sm font-semibold ${theme.accent} opacity-40`}>Agrivía</span>
+                        </div>
+                    )}
+            </div>
+        </>
+    );
+}
+
+// ============================
+// SIDEBAR (desktop, ≥768px)
+// ============================
+function Sidebar({ theme, isDark, activePage, setActivePage, toggleTheme }) {
+    return (
+        <aside className={`hidden md:flex w-60 min-h-screen flex-col shrink-0 ${theme.sidebarBg} border-r ${theme.divider}`}>
+            <SidebarBody
+                theme={theme} isDark={isDark}
+                activePage={activePage} setActivePage={setActivePage}
+                toggleTheme={toggleTheme}
+            />
+        </aside>
+    );
+}
+
+// ============================
+// MOBILE TOP BAR (<768px)
+// ============================
+function MobileTopBar({ theme, isConnected, onOpenMenu }) {
+    return (
+        <header className={`md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 h-14 px-4 ${theme.sidebarBg} border-b ${theme.divider}`}>
+            <div className="flex items-center gap-2">
+                <button onClick={onOpenMenu} aria-label="Ouvrir le menu"
+                    className={`-ml-1 w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${theme.toggleBg} ${theme.textMuted}`}>
+                    <Menu className="w-5 h-5" />
+                </button>
+                <div className="flex items-center gap-2">
+                    <Sprout className={`w-6 h-6 ${theme.accent}`} />
+                    <span className={`text-lg font-bold ${theme.accent}`}>Agrivía</span>
                 </div>
             </div>
-        </aside>
+            <ConnectionIndicator theme={theme} isConnected={isConnected} />
+        </header>
+    );
+}
+
+// ============================
+// MOBILE DRAWER (<768px slide-in nav)
+// ============================
+function MobileDrawer({ theme, isDark, activePage, setActivePage, toggleTheme, isConnected, open, onClose }) {
+    return (
+        <div className={`md:hidden fixed inset-0 z-40 ${open ? '' : 'pointer-events-none'}`} aria-hidden={!open}>
+            {/* Backdrop */}
+            <div
+                onClick={onClose}
+                className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
+            />
+            {/* Drawer panel */}
+            <aside
+                className={`absolute left-0 top-0 h-full w-72 max-w-[85%] flex flex-col ${theme.sidebarBg} border-r ${theme.divider}
+                    shadow-xl transition-transform duration-300 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="flex justify-end px-3 pt-3">
+                    <button onClick={onClose} aria-label="Fermer le menu"
+                        className={`w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${theme.toggleBg} ${theme.textMuted}`}>
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                {open && (
+                    <SidebarBody
+                        theme={theme} isDark={isDark}
+                        activePage={activePage} setActivePage={setActivePage}
+                        toggleTheme={toggleTheme}
+                        isConnected={isConnected}
+                        onNavigate={onClose}
+                    />
+                )}
+            </aside>
+        </div>
     );
 }
 
@@ -194,17 +292,17 @@ const TIME_TABS = ['Jour', 'Semaine', 'Mois', 'Année'];
 
 function DashboardHeader({ theme, activeTab, setActiveTab }) {
     return (
-        <div className={`flex items-center justify-between px-8 pt-6 pb-0 border-b ${theme.divider}`}>
+        <div className={`flex items-center justify-between gap-3 px-4 md:px-8 pt-5 md:pt-6 pb-0 border-b ${theme.divider}`}>
             {/* Logo */}
             <div className="flex items-center gap-2">
                 <Sprout className={`w-6 h-6 ${theme.accent}`} />
                 <span className={`text-lg font-bold ${theme.accent}`}>Agrivía</span>
             </div>
             {/* Tabs */}
-            <div className="flex gap-6">
+            <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 md:gap-6">
                 {TIME_TABS.map(tab => (
                     <button key={tab} onClick={() => setActiveTab(tab)}
-                        className={`pb-4 text-sm font-medium transition-all duration-150
+                        className={`pb-2 md:pb-4 text-sm font-medium transition-all duration-150
                             ${activeTab === tab ? theme.tabActive : theme.tabInactive}`}>
                         {tab}
                     </button>
@@ -231,7 +329,7 @@ function SummaryCard({ theme, currentData }) {
     ];
 
     return (
-        <div className={`mx-8 mt-6 rounded-2xl border ${theme.border} ${theme.summaryBg} px-6 py-4 flex flex-wrap items-center gap-6`}>
+        <div className={`mx-4 md:mx-8 mt-4 md:mt-6 rounded-2xl border ${theme.border} ${theme.summaryBg} px-4 md:px-6 py-4 flex flex-wrap items-center gap-4 md:gap-6`}>
             {/* Date */}
             <div className={`flex items-center gap-2 ${theme.textMuted} shrink-0`}>
                 <Calendar className="w-4 h-4" />
@@ -426,8 +524,8 @@ function DashboardPage({ theme, historyData, devices }) {
         <div className="flex flex-col min-h-screen">
             <DashboardHeader theme={theme} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-            <div className="px-8 pt-6 pb-2">
-                <h1 className={`text-2xl font-bold ${theme.text}`}>Tableau de bord</h1>
+            <div className="px-4 md:px-8 pt-5 md:pt-6 pb-2">
+                <h1 className={`text-xl md:text-2xl font-bold ${theme.text}`}>Tableau de bord</h1>
                 <p className={`text-sm mt-1 ${theme.textMuted}`}>
                     {allSerreIds.length > 0
                         ? `${allSerreIds.length} serre${allSerreIds.length !== 1 ? 's' : ''} surveillée${allSerreIds.length !== 1 ? 's' : ''}`
@@ -436,7 +534,7 @@ function DashboardPage({ theme, historyData, devices }) {
             </div>
 
             {allSerreIds.length === 0 ? (
-                <div className="px-8 py-16 text-center">
+                <div className="px-4 md:px-8 py-12 md:py-16 text-center">
                     <Sprout className={`w-12 h-12 mx-auto mb-3 ${theme.textMuted} opacity-30`} />
                     <p className={`${theme.textMuted} text-sm`}>Aucune donnée reçue — démarrez les simulateurs</p>
                 </div>
@@ -450,10 +548,10 @@ function DashboardPage({ theme, historyData, devices }) {
                     return (
                         <div key={serreId}>
                             {/* Séparateur entre serres */}
-                            {idx > 0 && <div className={`mx-8 mt-4 border-t ${theme.divider}`} />}
+                            {idx > 0 && <div className={`mx-4 md:mx-8 mt-4 border-t ${theme.divider}`} />}
 
                             {/* En-tête serre */}
-                            <div className="px-8 pt-6 flex items-center gap-3">
+                            <div className="px-4 md:px-8 pt-5 md:pt-6 flex flex-wrap items-center gap-x-3 gap-y-2">
                                 <Sprout className={`w-5 h-5 ${theme.accent}`} />
                                 <h2 className={`text-lg font-bold ${theme.text}`}>{serreId}</h2>
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium
@@ -464,7 +562,7 @@ function DashboardPage({ theme, historyData, devices }) {
 
                             <SummaryCard theme={theme} currentData={serreCurrentData} />
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 px-8 py-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5 px-4 md:px-8 py-4 md:py-6">
                                 <TemperatureCard  theme={theme} historyData={serreHistory} />
                                 <AirHumidityCard  theme={theme} currentData={serreCurrentData} />
                                 <SoilHumidityCard theme={theme} historyData={serreHistory} />
@@ -570,9 +668,9 @@ function OverviewChart({ theme, historyData }) {
     };
 
     return (
-        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-5 flex flex-col flex-1 min-h-0`}>
+        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-5 flex flex-col md:flex-1 md:min-h-0`}>
             <h3 className={`text-sm font-semibold ${theme.text} mb-4 shrink-0`}>Vue d'ensemble — toutes les mesures</h3>
-            <div className="flex-1 min-h-0">
+            <div className="h-[240px] md:h-auto md:flex-1 md:min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={theme.chartGrid} vertical={false} />
@@ -627,21 +725,21 @@ function AnalysisPage({ theme, currentData, historyData }) {
     );
 
     return (
-        <div className="flex flex-col h-screen overflow-hidden">
+        <div className="flex flex-col min-h-screen md:h-screen md:overflow-hidden">
             {/* Header */}
-            <div className={`px-8 pt-8 pb-6 border-b ${theme.divider} shrink-0`}>
-                <h1 className={`text-2xl font-bold ${theme.text}`}>Analyse et prévisions</h1>
+            <div className={`px-4 md:px-8 pt-5 md:pt-8 pb-4 md:pb-6 border-b ${theme.divider} shrink-0`}>
+                <h1 className={`text-xl md:text-2xl font-bold ${theme.text}`}>Analyse et prévisions</h1>
                 <p className={`text-sm mt-1 ${theme.textMuted}`}>
                     Basé sur les {historyData.length} dernières mesures
                 </p>
             </div>
 
-            <div className="px-8 py-6 flex flex-col gap-6 flex-1 min-h-0">
+            <div className="px-4 md:px-8 py-4 md:py-6 flex flex-col gap-4 md:gap-6 md:flex-1 md:min-h-0">
                 {/* Overview chart */}
                 <OverviewChart theme={theme} historyData={historyData} />
 
                 {/* Stat cards 2×2 */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 shrink-0">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5 shrink-0">
                     {sensors.map(({ key, title, icon, unit, decimals, color }) => (
                         <AnalysisStatCard
                             key={key}
@@ -696,31 +794,33 @@ function HistoryPage({ theme, historyData, thresholds }) {
     return (
         <div className="flex flex-col min-h-screen">
             {/* Header */}
-            <div className={`px-8 pt-8 pb-6 border-b ${theme.divider}`}>
+            <div className={`px-4 md:px-8 pt-5 md:pt-8 pb-4 md:pb-6 border-b ${theme.divider}`}>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                     <div>
-                        <h1 className={`text-2xl font-bold ${theme.text}`}>Historique</h1>
+                        <h1 className={`text-xl md:text-2xl font-bold ${theme.text}`}>Historique</h1>
                         <p className={`text-sm mt-1 ${theme.textMuted}`}>
                             {historyData.length} mesure{historyData.length > 1 ? 's' : ''} enregistrée{historyData.length > 1 ? 's' : ''}
                         </p>
                     </div>
                     <button
                         onClick={() => setSortAsc(s => !s)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border ${theme.border} ${theme.cardBg} ${theme.textMuted} hover:${theme.text} transition-colors`}>
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border ${theme.border} ${theme.cardBg} ${theme.textMuted} hover:${theme.text} transition-colors`}>
                         {sortAsc ? '↑ Plus ancien d\'abord' : '↓ Plus récent d\'abord'}
                     </button>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="px-8 py-6">
+            <div className="px-4 md:px-8 py-4 md:py-6">
                 {historyData.length === 0 ? (
                     <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-12 text-center`}>
                         <History className={`w-12 h-12 mx-auto mb-3 ${theme.textMuted} opacity-40`} />
                         <p className={theme.textMuted}>Aucune donnée disponible — en attente du simulateur</p>
                     </div>
                 ) : (
-                    <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} overflow-hidden`}>
+                    <>
+                    {/* ── Desktop table (≥768px) ─────────────────────── */}
+                    <div className={`hidden md:block rounded-2xl border ${theme.border} ${theme.cardBg} overflow-hidden`}>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 {/* Head */}
@@ -811,6 +911,87 @@ function HistoryPage({ theme, historyData, thresholds }) {
                             </div>
                         </div>
                     </div>
+
+                    {/* ── Mobile stacked cards (<768px) ──────────────── */}
+                    <div className="md:hidden flex flex-col gap-3">
+                        {rows.map((row, i) => {
+                            const s  = row.sensors   || {};
+                            const a  = row.actuators || {};
+                            const ai = row.ai_context;
+
+                            return (
+                                <div key={i}
+                                    className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-4 flex flex-col gap-3`}>
+                                    {/* Horodatage */}
+                                    <div className={`font-mono text-xs ${theme.textMuted}`}>
+                                        {fmtDate(row.timestamp)}
+                                    </div>
+
+                                    {/* Sensor values */}
+                                    <div className={`grid grid-cols-2 gap-2 py-2 border-y ${theme.divider}`}>
+                                        <div>
+                                            <p className={`text-xs ${theme.textLabel}`}>Température</p>
+                                            <p className={`text-sm font-semibold
+                                                ${isTempCritical(s.temperature) ? 'text-orange-400' : theme.text}`}>
+                                                {fmt(s.temperature)}°C
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className={`text-xs ${theme.textLabel}`}>Hum. air</p>
+                                            <p className={`text-sm font-semibold ${theme.text}`}>{fmt(s.air_humidity)}%</p>
+                                        </div>
+                                        <div>
+                                            <p className={`text-xs ${theme.textLabel}`}>Hum. sol</p>
+                                            <p className={`text-sm font-semibold
+                                                ${isSoilCritical(s.soil_humidity) ? 'text-blue-400' : theme.text}`}>
+                                                {fmt(s.soil_humidity)}%
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className={`text-xs ${theme.textLabel}`}>Luminosité</p>
+                                            <p className={`text-sm font-semibold ${theme.text}`}>
+                                                {s.light_level != null ? s.light_level : '—'} lux
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Actionneurs */}
+                                    <div>
+                                        <p className={`text-xs ${theme.textLabel} mb-1.5`}>Actionneurs</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            <ActuatorDot active={a.pump?.state}       label="Pompe" />
+                                            <ActuatorDot active={a.fan?.state}        label="Fan" />
+                                            <ActuatorDot active={a.grow_light?.state} label="LED" />
+                                        </div>
+                                    </div>
+
+                                    {/* Action IA */}
+                                    <div>
+                                        <p className={`text-xs ${theme.textLabel} mb-1`}>Action IA</p>
+                                        <p className={`text-xs ${theme.textMuted}`}>{ai?.last_action || '—'}</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {/* Footer / légende */}
+                        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} px-4 py-3 flex flex-col gap-2`}>
+                            <span className={`text-xs ${theme.textMuted}`}>
+                                {historyData.length} / 20 entrées max (mémoire backend)
+                            </span>
+                            <div className="flex flex-wrap gap-3 text-xs">
+                                <span className="flex items-center gap-1 text-orange-400">
+                                    <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
+                                    Température &gt; {tempLimit}°C
+                                </span>
+                                <span className="flex items-center gap-1 text-blue-400">
+                                    <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                                    Sol &lt; {soilLimit}%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    </>
                 )}
             </div>
         </div>
@@ -961,10 +1142,10 @@ function MonitoringPage({ theme, devices }) {
     return (
         <div className="flex flex-col min-h-screen">
             {/* Header */}
-            <div className={`px-8 pt-8 pb-6 border-b ${theme.divider}`}>
+            <div className={`px-4 md:px-8 pt-5 md:pt-8 pb-4 md:pb-6 border-b ${theme.divider}`}>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                     <div>
-                        <h1 className={`text-2xl font-bold ${theme.text}`}>Monitoring</h1>
+                        <h1 className={`text-xl md:text-2xl font-bold ${theme.text}`}>Monitoring</h1>
                         <p className={`text-sm mt-1 ${theme.textMuted}`}>
                             {Object.keys(serreGroups).length} serre{Object.keys(serreGroups).length !== 1 ? 's' : ''} — {devices.length} module{devices.length !== 1 ? 's' : ''} — {online} en ligne
                         </p>
@@ -979,7 +1160,7 @@ function MonitoringPage({ theme, devices }) {
             </div>
 
             {/* Cards groupées par serre */}
-            <div className="px-8 py-6 flex flex-col gap-8">
+            <div className="px-4 md:px-8 py-4 md:py-6 flex flex-col gap-6 md:gap-8">
                 {devices.length === 0 ? (
                     <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-12 text-center`}>
                         <Monitor className={`w-12 h-12 mx-auto mb-3 ${theme.textMuted} opacity-40`} />
@@ -998,7 +1179,7 @@ function MonitoringPage({ theme, devices }) {
                                         {onlineInSerre}/{devs.length} en ligne
                                     </span>
                                 </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
                                     {devs.map(device => (
                                         <DeviceCard key={device.esp_id} theme={theme} device={device} />
                                     ))}
@@ -1237,10 +1418,10 @@ function ManualPage({ theme, currentData, thresholds, onThresholdsChange, device
     return (
         <div className="flex flex-col min-h-screen">
             {/* ── Header ─────────────────────────────────────────── */}
-            <div className={`px-8 pt-8 pb-6 border-b ${theme.divider}`}>
+            <div className={`px-4 md:px-8 pt-5 md:pt-8 pb-4 md:pb-6 border-b ${theme.divider}`}>
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <h1 className={`text-2xl font-bold ${theme.text}`}>Pilotage manuel</h1>
+                        <h1 className={`text-xl md:text-2xl font-bold ${theme.text}`}>Pilotage manuel</h1>
                         <p className={`text-sm mt-1 ${theme.textMuted}`}>
                             {isManual
                                 ? 'Contrôle direct des actionneurs — autopilote désactivé'
@@ -1249,13 +1430,13 @@ function ManualPage({ theme, currentData, thresholds, onThresholdsChange, device
                     </div>
                     <div className={`flex items-center p-1 rounded-xl border ${theme.border} ${theme.cardBg}`}>
                         <button onClick={toggleMode}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
                                 ${!isManual ? 'bg-green-500 text-white shadow-sm' : theme.textMuted}`}>
                             <Bot className="w-4 h-4" />
                             Automatique
                         </button>
                         <button onClick={toggleMode}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                            className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
                                 ${isManual ? 'bg-green-500 text-white shadow-sm' : theme.textMuted}`}>
                             <SlidersHorizontal className="w-4 h-4" />
                             Manuel
@@ -1265,11 +1446,11 @@ function ManualPage({ theme, currentData, thresholds, onThresholdsChange, device
             </div>
 
             {/* ── Seuils globaux (ControlCards) ──────────────────── */}
-            <div className="px-8 pt-6">
+            <div className="px-4 md:px-8 pt-5 md:pt-6">
                 <p className={`text-xs font-semibold uppercase tracking-wide ${theme.textLabel} mb-4`}>
                     Seuils autopilote — appliqués à tous les modules
                 </p>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
                     <ControlCard
                         theme={theme} title="Température" icon={Thermometer}
                         currentValue={sensors.temperature} unit="°C"
@@ -1302,7 +1483,7 @@ function ManualPage({ theme, currentData, thresholds, onThresholdsChange, device
             </div>
 
             {/* ── Modules par serre ──────────────────────────────── */}
-            <div className="px-8 py-8 flex flex-col gap-8">
+            <div className="px-4 md:px-8 py-5 md:py-8 flex flex-col gap-6 md:gap-8">
                 {devices.length === 0 ? (
                     <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-12 text-center`}>
                         <Monitor className={`w-12 h-12 mx-auto mb-3 ${theme.textMuted} opacity-40`} />
@@ -1327,7 +1508,7 @@ function ManualPage({ theme, currentData, thresholds, onThresholdsChange, device
                                 </div>
 
                                 {/* Cards des modules */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
                                     {devs.map(device => (
                                         <ModuleCard
                                             key={device.esp_id}
@@ -1359,6 +1540,7 @@ function ManualPage({ theme, currentData, thresholds, onThresholdsChange, device
 export default function App() {
     const [isDark, setIsDark]         = useState(true);
     const [activePage, setActivePage] = useState('dashboard');
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [currentData, setCurrentData] = useState(null);
     const [historyData, setHistoryData] = useState([]);
     const [isConnected, setIsConnected] = useState(false);
@@ -1444,9 +1626,22 @@ export default function App() {
                 activePage={activePage} setActivePage={setActivePage}
                 toggleTheme={() => setIsDark(d => !d)}
             />
-            <main className="flex-1 overflow-auto">
-                {renderPage()}
-            </main>
+            <MobileDrawer
+                theme={theme} isDark={isDark}
+                activePage={activePage} setActivePage={setActivePage}
+                toggleTheme={() => setIsDark(d => !d)}
+                isConnected={isConnected}
+                open={mobileNavOpen} onClose={() => setMobileNavOpen(false)}
+            />
+            <div className="flex-1 flex flex-col min-w-0">
+                <MobileTopBar
+                    theme={theme} isConnected={isConnected}
+                    onOpenMenu={() => setMobileNavOpen(true)}
+                />
+                <main className="flex-1 overflow-auto">
+                    {renderPage()}
+                </main>
+            </div>
         </div>
     );
 }
