@@ -94,3 +94,7 @@ Agrivia/
 | `BACKEND_WS_URL` | `ws://backend:3000/ws` | URL WebSocket du backend |
 | `SERRE_ID` | `serre_01` | Identifiant de la serre |
 | `AUTH_TOKEN` | `RASPBERRY_SECRET_TOKEN` | Token d'authentification |
+
+### Lien de l'app:
+
+`https://agrivia-zeta.vercel.app/`
