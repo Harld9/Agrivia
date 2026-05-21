@@ -570,23 +570,25 @@ function OverviewChart({ theme, historyData }) {
     };
 
     return (
-        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-5`}>
-            <h3 className={`text-sm font-semibold ${theme.text} mb-4`}>Vue d'ensemble — toutes les mesures</h3>
-            <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={theme.chartGrid} vertical={false} />
-                    <XAxis dataKey="time" tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '12px', color: theme.chartText }} />
-                    {SENSOR_LINES.map(({ key, label, color }) => (
-                        <Line key={key} type="monotone" dataKey={key} name={label}
-                            stroke={color} strokeWidth={2} dot={false}
-                            activeDot={{ r: 4, fill: color }} connectNulls />
-                    ))}
-                </LineChart>
-            </ResponsiveContainer>
-            <p className={`text-xs ${theme.textMuted} mt-2`}>
+        <div className={`rounded-2xl border ${theme.border} ${theme.cardBg} p-5 flex flex-col flex-1 min-h-0`}>
+            <h3 className={`text-sm font-semibold ${theme.text} mb-4 shrink-0`}>Vue d'ensemble — toutes les mesures</h3>
+            <div className="flex-1 min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={theme.chartGrid} vertical={false} />
+                        <XAxis dataKey="time" tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                        <YAxis tick={{ fill: theme.chartText, fontSize: 11 }} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '12px', color: theme.chartText }} />
+                        {SENSOR_LINES.map(({ key, label, color }) => (
+                            <Line key={key} type="monotone" dataKey={key} name={label}
+                                stroke={color} strokeWidth={2} dot={false}
+                                activeDot={{ r: 4, fill: color }} connectNulls />
+                        ))}
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+            <p className={`text-xs ${theme.textMuted} mt-2 shrink-0`}>
                 * Luminosité divisée par 10 pour l'affichage comparatif
             </p>
         </div>
@@ -625,21 +627,21 @@ function AnalysisPage({ theme, currentData, historyData }) {
     );
 
     return (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col h-screen overflow-hidden">
             {/* Header */}
-            <div className={`px-8 pt-8 pb-6 border-b ${theme.divider}`}>
+            <div className={`px-8 pt-8 pb-6 border-b ${theme.divider} shrink-0`}>
                 <h1 className={`text-2xl font-bold ${theme.text}`}>Analyse et prévisions</h1>
                 <p className={`text-sm mt-1 ${theme.textMuted}`}>
                     Basé sur les {historyData.length} dernières mesures
                 </p>
             </div>
 
-            <div className="px-8 py-6 flex flex-col gap-6">
+            <div className="px-8 py-6 flex flex-col gap-6 flex-1 min-h-0">
                 {/* Overview chart */}
                 <OverviewChart theme={theme} historyData={historyData} />
 
                 {/* Stat cards 2×2 */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 shrink-0">
                     {sensors.map(({ key, title, icon, unit, decimals, color }) => (
                         <AnalysisStatCard
                             key={key}
