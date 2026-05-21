@@ -5,7 +5,7 @@ import {
     User, Settings, Sprout, Sun, Moon, Calendar,
     Thermometer, Droplets, Leaf, Zap,
     Bot, Waves, Fan, Lightbulb, Plus, Minus, Monitor,
-    Menu, X,
+    Menu, X, ChevronDown,
 } from 'lucide-react';
 import Switch from '@mui/material/Switch';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -118,18 +118,20 @@ function ConnectionIndicator({ theme, isConnected }) {
 // ============================
 // SIDEBAR CONTENT (shared by desktop aside + mobile drawer)
 // ============================
-function SidebarBody({ theme, isDark, activePage, setActivePage, toggleTheme, isConnected, onNavigate }) {
+function SidebarBody({ theme, isDark, activePage, setActivePage, toggleTheme, isConnected, onNavigate, hideLogo }) {
     const handleNav = (id) => {
         setActivePage(id);
         if (onNavigate) onNavigate();
     };
     return (
         <>
-            <div className="px-6 pt-8 pb-6">
-                <div className="flex items-center gap-2 mb-5">
-                    <Sprout className={`w-7 h-7 ${theme.accent}`} />
-                    <span className={`text-xl font-bold ${theme.accent}`}>Agrivía</span>
-                </div>
+            <div className={`px-6 ${hideLogo ? 'pt-2' : 'pt-8'} pb-6`}>
+                {!hideLogo && (
+                    <div className="flex items-center gap-2 mb-5">
+                        <Sprout className={`w-7 h-7 ${theme.accent}`} />
+                        <span className={`text-xl font-bold ${theme.accent}`}>Agrivía</span>
+                    </div>
+                )}
                 <div className={`text-sm font-medium ${theme.text}`}>John Doe</div>
                 <div className={`text-xs ${theme.textMuted} mt-0.5`}>Responsable serre</div>
             </div>
@@ -231,9 +233,13 @@ function MobileDrawer({ theme, isDark, activePage, setActivePage, toggleTheme, i
             <aside
                 className={`absolute left-0 top-0 h-full w-72 max-w-[85%] flex flex-col ${theme.sidebarBg} border-r ${theme.divider}
                     shadow-xl transition-transform duration-300 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="flex justify-end px-3 pt-3">
+                <div className="flex items-center justify-between gap-3 px-6 pt-4 pb-2">
+                    <div className="flex items-center gap-2">
+                        <Sprout className={`w-7 h-7 ${theme.accent}`} />
+                        <span className={`text-xl font-bold ${theme.accent}`}>Agrivía</span>
+                    </div>
                     <button onClick={onClose} aria-label="Fermer le menu"
-                        className={`w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${theme.toggleBg} ${theme.textMuted}`}>
+                        className={`-mr-2 w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${theme.toggleBg} ${theme.textMuted}`}>
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -244,6 +250,7 @@ function MobileDrawer({ theme, isDark, activePage, setActivePage, toggleTheme, i
                         toggleTheme={toggleTheme}
                         isConnected={isConnected}
                         onNavigate={onClose}
+                        hideLogo
                     />
                 )}
             </aside>
@@ -292,17 +299,29 @@ const TIME_TABS = ['Jour', 'Semaine', 'Mois', 'Année'];
 
 function DashboardHeader({ theme, activeTab, setActiveTab }) {
     return (
-        <div className={`flex items-center justify-between gap-3 px-4 md:px-8 pt-5 md:pt-6 pb-0 border-b ${theme.divider}`}>
+        <div className={`flex items-center justify-between gap-3 px-4 md:px-8 pt-5 md:pt-6 pb-3 md:pb-0 border-b ${theme.divider}`}>
             {/* Logo */}
             <div className="flex items-center gap-2">
                 <Sprout className={`w-6 h-6 ${theme.accent}`} />
                 <span className={`text-lg font-bold ${theme.accent}`}>Agrivía</span>
             </div>
-            {/* Tabs */}
-            <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 md:gap-6">
+            {/* Période — liste déroulante sur mobile, onglets sur desktop */}
+            <div className="relative md:hidden">
+                <select
+                    value={activeTab}
+                    onChange={(e) => setActiveTab(e.target.value)}
+                    aria-label="Période"
+                    className={`appearance-none cursor-pointer text-sm font-semibold rounded-xl border pl-4 pr-10 py-2.5 ${theme.border} ${theme.cardBg} ${theme.text} focus:outline-none focus:ring-2 focus:ring-emerald-500/40`}>
+                    {TIME_TABS.map(tab => (
+                        <option key={tab} value={tab}>{tab}</option>
+                    ))}
+                </select>
+                <ChevronDown className={`w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${theme.textMuted}`} />
+            </div>
+            <div className="hidden md:flex justify-end gap-6">
                 {TIME_TABS.map(tab => (
                     <button key={tab} onClick={() => setActiveTab(tab)}
-                        className={`pb-2 md:pb-4 text-sm font-medium transition-all duration-150
+                        className={`pb-4 text-sm font-medium transition-all duration-150
                             ${activeTab === tab ? theme.tabActive : theme.tabInactive}`}>
                         {tab}
                     </button>
